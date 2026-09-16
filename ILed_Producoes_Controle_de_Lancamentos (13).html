@@ -1,0 +1,2862 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ILed Produções · Controle de Lançamentos para Folha de Pagamento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14171c;
+    --surface: #1b1f26;
+    --surface-2: #21262e;
+    --line: #2b313b;
+    --text: #edeff2;
+    --muted: #8a93a3;
+    --amber: #ffb020;
+    --cyan: #29d3c6;
+    --magenta: #ff4d6a;
+    --brand-red: #e2241b;
+    --green: #6ee787;
+    --mono: 'JetBrains Mono', monospace;
+    --display: 'Barlow Condensed', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{ background:var(--amber); color:#14171c; }
+
+  /* ---------- LED strip header ---------- */
+  .led-strip{
+    display:flex; gap:6px; align-items:center; padding:10px 20px;
+    background:#0e1014; border-bottom:1px solid var(--line);
+  }
+  .led-dot{
+    width:8px; height:8px; border-radius:50%;
+    background:#333; box-shadow:0 0 0 rgba(0,0,0,0);
+    animation: pulse 3.2s ease-in-out infinite;
+  }
+  .led-dot:nth-child(1){ background:var(--amber); animation-delay:0s; }
+  .led-dot:nth-child(2){ background:var(--magenta); animation-delay:.25s; }
+  .led-dot:nth-child(3){ background:var(--cyan); animation-delay:.5s; }
+  .led-dot:nth-child(4){ background:var(--green); animation-delay:.75s; }
+  .led-dot:nth-child(5){ background:var(--amber); animation-delay:1s; }
+  .led-dot:nth-child(6){ background:var(--cyan); animation-delay:1.25s; }
+  @keyframes pulse{
+    0%,100%{ opacity:.25; box-shadow:0 0 0 rgba(255,255,255,0); }
+    50%{ opacity:1; box-shadow:0 0 8px currentColor; }
+  }
+  .led-strip .period{
+    margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);
+    letter-spacing:.05em;
+  }
+  @media (prefers-reduced-motion: reduce){ .led-dot{ animation:none; opacity:.8; } }
+
+  header.top{
+    padding:18px 20px 16px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    background: radial-gradient(ellipse 900px 200px at 0% 0%, rgba(255,176,32,.06), transparent 70%);
+    position:relative;
+  }
+  header.top::after{
+    content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px;
+    background:linear-gradient(90deg, var(--brand-red) 0 8%, var(--amber) 8% 16%, transparent 16%);
+    opacity:.7;
+  }
+  .brand{ display:flex; align-items:center; gap:14px; }
+  .brand-mark{ width:46px; height:46px; flex-shrink:0; color:var(--amber); filter:drop-shadow(0 0 10px rgba(255,176,32,.25)); }
+  .brand-name{
+    font-family:var(--display); font-weight:800; font-size:26px; line-height:1;
+    letter-spacing:.01em; text-transform:uppercase; color:var(--text);
+  }
+  .brand-name b{ color:var(--amber); font-weight:800; }
+  .brand-name .produtora{
+    display:block; font-family:var(--body); font-weight:600; font-size:10px; letter-spacing:.32em;
+    color:var(--muted); text-transform:uppercase; margin-top:3px;
+  }
+  .brand-chips{ display:inline-flex; gap:3px; margin-left:6px; vertical-align:middle; }
+  .brand-chips i{ width:6px; height:9px; display:inline-block; border-radius:1px; }
+  .brand-divider{ width:1px; align-self:stretch; background:var(--line); margin:2px 4px; }
+  header.top .sub{ color:var(--muted); font-size:12.5px; }
+  header.top .spacer{ flex:1; min-width:20px; }
+  .mes-switcher{ display:flex; align-items:center; gap:8px; }
+  .mes-switcher label{ font-family:var(--mono); font-size:10.5px; color:var(--muted); letter-spacing:.06em; }
+  .mes-switcher select{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:6px; font-family:var(--mono); font-size:13px; font-weight:600;
+  }
+  @media (max-width:720px){ header.top{ flex-direction:column; align-items:flex-start; } header.top .spacer{ display:none; } }
+
+  .alert-banner{
+    display:flex; align-items:center; gap:14px; background:rgba(255,77,106,.09);
+    border:1px solid rgba(255,77,106,.35); border-radius:10px; padding:14px 16px; margin-bottom:18px;
+    font-size:13px; line-height:1.5;
+  }
+  .alert-banner .alert-icon{ font-size:20px; color:var(--magenta); flex-shrink:0; }
+  .alert-banner strong{ color:var(--text); }
+  .alert-banner .btn{ flex-shrink:0; margin-left:auto; }
+  .alert-banner.info{ background:rgba(255,176,32,.08); border-color:rgba(255,176,32,.35); }
+  .alert-banner.info .alert-icon{ color:var(--amber); }
+  .alert-banner .btn-row{ display:flex; gap:8px; flex-shrink:0; margin-left:auto; }
+  tr.row-pendente td{ background:rgba(255,77,106,.07); border-left:2px solid var(--magenta); }
+  tr.row-pendente td:first-child{ border-left:2px solid var(--magenta); }
+  tr.row-duplicada td{ background:rgba(255,184,0,.08); }
+  tr.row-duplicada td:first-child{ border-left:2px solid var(--amber); }
+  tr.row-pendente.row-duplicada td:first-child{ border-left:2px solid var(--magenta); box-shadow:inset 3px 0 0 var(--amber); }
+  .warn-dot{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:16px; height:16px; margin-left:4px; font-size:11px; line-height:1;
+    color:var(--amber); cursor:help; vertical-align:middle;
+  }
+
+  /* ---------- Tabs ---------- */
+  nav.tabs{
+    display:flex; gap:4px; padding:0 20px; border-bottom:1px solid var(--line);
+    background:var(--bg); overflow-x:auto;
+  }
+  nav.tabs button{
+    background:none; border:none; color:var(--muted); font-family:var(--display);
+    font-size:15px; font-weight:700; letter-spacing:.03em; text-transform:uppercase;
+    padding:11px 13px 10px; cursor:pointer; border-bottom:3px solid transparent;
+    white-space:nowrap; display:flex; align-items:center; gap:8px;
+  }
+  nav.tabs button .badge{
+    font-family:var(--mono); font-size:10px; font-weight:700; color:var(--bg);
+    background:var(--muted); border-radius:4px; padding:2px 5px;
+  }
+  nav.tabs button.active{ color:var(--text); border-bottom-color:var(--amber); }
+  nav.tabs button.active .badge{ background:var(--amber); }
+  nav.tabs button:hover{ color:var(--text); }
+
+  main{ padding:16px 20px 40px; max-width:1900px; }
+  section.panel{ display:none; animation: fadein .25s ease; }
+  section.panel.active{ display:block; }
+  @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
+
+  h2.section-title{
+    font-family:var(--display); font-size:20px; text-transform:uppercase;
+    letter-spacing:.02em; margin:0 0 3px; font-weight:700;
+  }
+  p.section-desc{ color:var(--muted); font-size:12.5px; margin:0 0 14px; max-width:760px; }
+
+  /* ---------- KPI cards ---------- */
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:18px; }
+  .kpi{
+    background:var(--surface); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px 11px; position:relative; overflow:hidden;
+  }
+  .kpi::before{
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent,var(--amber));
+  }
+  .kpi .label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
+  .kpi .value{ font-family:var(--mono); font-size:22px; font-weight:700; margin-top:4px; }
+  .kpi .value small{ font-size:12px; color:var(--muted); font-weight:400; }
+
+  /* ---------- Bars ---------- */
+  .bar-block{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+  .bar-block h3{ font-family:var(--display); font-size:15px; text-transform:uppercase; margin:0 0 10px; letter-spacing:.02em; }
+  .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:12.5px; }
+  .bar-row .bar-label{ width:150px; flex-shrink:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .bar-row .bar-track{ flex:1; background:var(--surface-2); border-radius:4px; height:10px; overflow:hidden; }
+  .bar-row .bar-fill{ height:100%; border-radius:4px; }
+  .bar-row .bar-val{ font-family:var(--mono); width:100px; text-align:right; flex-shrink:0; }
+
+  .two-col{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width:900px){ .two-col{ grid-template-columns:1fr; } }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .toolbar input[type=text], .toolbar input[type=date], .toolbar select{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    padding:7px 9px; border-radius:6px; font-family:var(--body); font-size:13px;
+  }
+  .toolbar input[type=number]{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    padding:7px 9px; border-radius:6px; font-family:var(--mono); font-size:13px; width:80px;
+  }
+  .btn{
+    background:var(--surface-2); border:1px solid var(--line); color:var(--text);
+    padding:7px 12px; border-radius:6px; font-family:var(--body); font-weight:600; font-size:13px;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{ border-color:var(--amber); }
+  .btn.primary{ background:var(--amber); color:#14171c; border-color:var(--amber); }
+  .btn.primary:hover{ filter:brightness(1.08); }
+  .btn.ghost{ background:none; }
+  .btn.danger:hover{ border-color:var(--magenta); color:var(--magenta); }
+  .spacer{ flex:1; }
+  .save-indicator{ font-family:var(--mono); font-size:11px; color:var(--green); opacity:0; transition:opacity .3s; }
+  .save-indicator.show{ opacity:1; }
+
+  /* ---------- Table ---------- */
+  .table-wrap{ background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:76vh; }
+  table{ border-collapse:separate; border-spacing:0; width:100%; font-size:13px; }
+  thead th{
+    position:sticky; top:0; background:var(--surface-2); text-align:left; padding:10px 12px;
+    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); border-bottom:1px solid var(--line); white-space:nowrap; z-index:1;
+  }
+  tbody td{ padding:8px 12px; border-bottom:1px solid var(--line); white-space:nowrap; vertical-align:middle; }
+  tbody tr:hover{ background:var(--surface-2); }
+  tbody td.num{ font-family:var(--mono); text-align:right; }
+  tbody tr.total-row td{ font-weight:700; background:var(--surface-2); position:sticky; bottom:0; }
+  td input, td select{
+    background:transparent; border:1px solid transparent; color:var(--text);
+    font-family:inherit; font-size:inherit; padding:6px 8px; border-radius:6px; width:100%;
+    box-sizing:border-box; line-height:1.3;
+  }
+  td input:hover, td select:hover{ border-color:var(--line); }
+  td input:focus, td select:focus{ border-color:var(--amber); outline:none; background:var(--surface-2); }
+  td input.num-in{ font-family:var(--mono); text-align:right; }
+
+  /* ---------- Cadastro: largura mínima por coluna p/ o nome caber inteiro ---------- */
+  #tblCadastro th:nth-child(1), #tblCadastro td:nth-child(1){ min-width:280px; }
+  #tblCadastro th:nth-child(2), #tblCadastro td:nth-child(2){ min-width:110px; }
+  #tblCadastro th:nth-child(3), #tblCadastro td:nth-child(3){ min-width:170px; }
+  #tblCadastro th:nth-child(4), #tblCadastro td:nth-child(4),
+  #tblCadastro th:nth-child(5), #tblCadastro td:nth-child(5){ min-width:110px; }
+  #tblCadastro th:nth-child(6), #tblCadastro td:nth-child(6){ min-width:70px; text-align:center; }
+  #tblCadastro td input[data-f="nome"]{ white-space:nowrap; }
+  #tblCadastro td input:disabled, #tblCadastro td select:disabled{
+    color:var(--muted); cursor:default; opacity:.85;
+  }
+  #tblCadastro .row-actions{ display:flex; gap:2px; justify-content:center; }
+  #tblCadastro .row-actions button{ font-size:15px; }
+
+  /* ---------- Fechamento: cabeçalho agrupado em 2 níveis + divisórias + coluna fixa ---------- */
+  #tblFechamento .group-row th{
+    height:24px; padding:5px 12px; font-size:9.5px; font-weight:700; letter-spacing:.07em;
+    text-align:center; color:var(--muted); background:var(--surface-2);
+    border-bottom:1px solid var(--line); top:0;
+  }
+  #tblFechamento thead tr:nth-child(2) th{ top:24px; }
+  #tblFechamento th:nth-child(1), #tblFechamento td:nth-child(1){ min-width:230px; }
+  #tblFechamento th:nth-child(2), #tblFechamento td:nth-child(2){ min-width:130px; }
+  #tblFechamento th:nth-child(3), #tblFechamento td:nth-child(3),
+  #tblFechamento th:nth-child(4), #tblFechamento td:nth-child(4),
+  #tblFechamento th:nth-child(5), #tblFechamento td:nth-child(5),
+  #tblFechamento th:nth-child(6), #tblFechamento td:nth-child(6),
+  #tblFechamento th:nth-child(7), #tblFechamento td:nth-child(7),
+  #tblFechamento th:nth-child(8), #tblFechamento td:nth-child(8){ min-width:78px; }
+  #tblFechamento .num-h{ text-align:right; }
+  /* divisórias entre os grupos de colunas — aplicadas via classe, não nth-child,
+     pra funcionar certo mesmo com colspan na linha de totais */
+  #tblFechamento .grp-l{ border-left:1px solid var(--line); }
+  /* coluna Nome fixa ao rolar horizontalmente */
+  #tblFechamento th:nth-child(1), #tblFechamento td:nth-child(1){
+    position:sticky; left:0; z-index:2; background:var(--surface);
+    box-shadow:1px 0 0 var(--line);
+  }
+  #tblFechamento thead th:nth-child(1){ z-index:3; }
+  #tblFechamento tbody tr:nth-child(even) td:nth-child(1){ background:#1e2229; }
+  #tblFechamento tbody tr:hover td:nth-child(1){ background:var(--surface-2); }
+  #tblFechamento tbody tr.total-row td:nth-child(1){ background:var(--surface-2); }
+  #tblFechamento td.num{ font-variant-numeric:tabular-nums; }
+
+  /* ---------- Anotações Financeiras ---------- */
+  #tblTiposFinanceiros th, #tblTiposFinanceiros td{ padding:7px 12px; }
+  #tblTiposFinanceiros th:nth-child(1), #tblTiposFinanceiros td:nth-child(1){ min-width:220px; }
+  #tblTiposFinanceiros th:nth-child(2), #tblTiposFinanceiros td:nth-child(2){ min-width:140px; }
+  #tblTiposFinanceiros th:nth-child(3), #tblTiposFinanceiros td:nth-child(3){ min-width:80px; text-align:center; }
+  #tblAnotacoes th:nth-child(1), #tblAnotacoes td:nth-child(1){ min-width:120px; }
+  #tblAnotacoes th:nth-child(2), #tblAnotacoes td:nth-child(2){ min-width:240px; }
+  #tblAnotacoes th:nth-child(3), #tblAnotacoes td:nth-child(3){ min-width:190px; }
+  #tblAnotacoes th:nth-child(4), #tblAnotacoes td:nth-child(4){ min-width:100px; text-align:center; }
+  #tblAnotacoes th:nth-child(5), #tblAnotacoes td:nth-child(5){ min-width:110px; }
+  #tblAnotacoes th:nth-child(5) input{ text-align:right; font-family:var(--mono); }
+  #tblAnotacoes th:nth-child(6), #tblAnotacoes td:nth-child(6){ min-width:220px; }
+  #tblAnotacoes th:nth-child(7), #tblAnotacoes td:nth-child(7){ min-width:96px; text-align:center; }
+
+  /* ---------- Ocorrências: largura mínima por coluna p/ não embolar ---------- */
+  #tblOcorrencias th, #tblOcorrencias td{ padding-left:10px; padding-right:10px; }
+  #tblOcorrencias th:nth-child(2), #tblOcorrencias td:nth-child(2){ min-width:118px; }
+  #tblOcorrencias th:nth-child(3), #tblOcorrencias td:nth-child(3){ min-width:118px; }
+  #tblOcorrencias th:nth-child(4), #tblOcorrencias td:nth-child(4){ min-width:260px; }
+  #tblOcorrencias th:nth-child(5), #tblOcorrencias td:nth-child(5){ min-width:170px; }
+  #tblOcorrencias th:nth-child(6), #tblOcorrencias td:nth-child(6){ min-width:60px; text-align:center; }
+  #tblOcorrencias th:nth-child(7), #tblOcorrencias td:nth-child(7),
+  #tblOcorrencias th:nth-child(8), #tblOcorrencias td:nth-child(8),
+  #tblOcorrencias th:nth-child(9), #tblOcorrencias td:nth-child(9){ min-width:88px; }
+  #tblOcorrencias th:nth-child(10), #tblOcorrencias td:nth-child(10){ min-width:66px; text-align:center; }
+  #tblOcorrencias th:nth-child(11), #tblOcorrencias td:nth-child(11),
+  #tblOcorrencias th:nth-child(12), #tblOcorrencias td:nth-child(12){ min-width:88px; text-align:center; }
+  #tblOcorrencias th:nth-child(13), #tblOcorrencias td:nth-child(13){ min-width:96px; text-align:center; }
+  #tblOcorrencias td:nth-child(6) input{ text-align:center; }
+  #tblOcorrencias td:nth-child(4) input{ width:100%; min-width:230px; }
+  #tblOcorrencias tbody tr{ height:44px; }
+  #tblOcorrencias tbody tr:nth-child(even){ background:rgba(255,255,255,.015); }
+  #tblOcorrencias th.sortable{ cursor:pointer; user-select:none; }
+  #tblOcorrencias th.sortable:hover{ color:var(--text); }
+  #tblOcorrencias th.sortable .arrow{ font-size:9px; margin-left:3px; opacity:.5; }
+  #tblOcorrencias th.sortable.active .arrow{ opacity:1; color:var(--amber); }
+  #tblOcorrencias tbody tr.row-selecionada td{ background:rgba(255,184,0,.10); }
+  .bulk-bar{
+    display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:9px 12px;
+    background:rgba(255,184,0,.08); border:1px solid var(--amber); border-radius:8px;
+    font-size:13px; font-weight:600;
+  }
+
+  .tag{
+    display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
+    font-family:var(--mono);
+  }
+  .row-actions button{
+    background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px;
+  }
+  .row-actions button:hover{ color:var(--magenta); }
+
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--muted); font-size:13px;
+  }
+  .empty-state .big{ font-family:var(--display); font-size:20px; color:var(--text); margin-bottom:6px; text-transform:uppercase; }
+
+  .legend{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
+  .legend span{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); font-family:var(--mono); }
+  .legend i{ width:9px; height:9px; border-radius:2px; display:inline-block; }
+
+  .footnote{ color:var(--muted); font-size:11.5px; margin-top:10px; }
+  .drop-zone{
+    border:1.5px dashed var(--line); border-radius:10px; padding:22px; text-align:center;
+    color:var(--muted); font-size:13px; margin-bottom:18px; cursor:pointer; transition:border-color .2s, color .2s;
+  }
+  .drop-zone:hover, .drop-zone.drag{ border-color:var(--amber); color:var(--text); }
+  .drop-zone strong{ color:var(--amber); }
+
+  ::-webkit-scrollbar{ width:10px; height:10px; }
+  ::-webkit-scrollbar-track{ background:var(--bg); }
+  ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="led-strip">
+  <div class="led-dot"></div><div class="led-dot"></div><div class="led-dot"></div>
+  <div class="led-dot"></div><div class="led-dot"></div><div class="led-dot"></div>
+  <div class="period" id="periodoLabel">CARREGANDO…</div>
+</div>
+
+<header class="top">
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 120 90" xmlns="http://www.w3.org/2000/svg">
+      <rect x="4" y="6" width="10" height="78" rx="5" fill="currentColor"/>
+      <rect x="26" y="6" width="10" height="78" rx="5" fill="currentColor"/>
+      <path d="M 46 7 H 76 A 38 38 0 0 1 76 83 H 46" fill="none" stroke="currentColor" stroke-width="10" stroke-linecap="round"/>
+      <rect x="52" y="41" width="26" height="8" rx="4" fill="var(--brand-red)"/>
+    </svg>
+    <div class="brand-name">
+      IL<b>ed</b>
+      <span class="brand-chips"><i style="background:var(--brand-red)"></i><i style="background:var(--amber)"></i><i style="background:#2b4fe0"></i></span>
+      <span class="produtora">Produções</span>
+    </div>
+  </div>
+  <div class="brand-divider"></div>
+  <div class="sub">Controle de Lançamentos para Folha de Pagamento</div>
+  <div class="spacer"></div>
+  <div class="mes-switcher">
+    <label>MÊS</label>
+    <select id="selMes"></select>
+    <button class="btn primary" id="btnNovoMes" title="Criar um novo mês, copiando o cadastro atual">+ Novo mês</button>
+    <button class="btn" id="btnSalvarAgora" title="Força salvar tudo que foi lançado neste mês agora">💾 Salvar agora</button>
+    <span class="save-indicator" id="globalSaveInd">tudo salvo</span>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="dashboard"><span class="badge">DB</span>Dashboard</button>
+  <button class="tab-btn" data-tab="cadastro"><span class="badge">CA</span>Cadastro</button>
+  <button class="tab-btn" data-tab="ocorrencias"><span class="badge">OC</span>Ocorrências</button>
+  <button class="tab-btn" data-tab="motivos"><span class="badge">MO</span>Motivos</button>
+  <button class="tab-btn" data-tab="fechamento"><span class="badge">FE</span>Fechamento</button>
+  <button class="tab-btn" data-tab="anotacoes"><span class="badge">AN</span>Anotações Financeiras</button>
+  <button class="tab-btn" data-tab="sincronizar"><span class="badge">SY</span>Sincronizar</button>
+</nav>
+
+<main>
+
+  <!-- ===================== DASHBOARD ===================== -->
+  <section class="panel active" id="panel-dashboard">
+    <h2 class="section-title">Dashboard do mês</h2>
+    <p class="section-desc">Consolidado de VA, VT e ocorrências a partir do Cadastro e das Ocorrências lançadas.</p>
+    <div id="lembreteBackup" style="display:none;"></div>
+    <div id="alertaFaltas" style="display:none;"></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="two-col">
+      <div class="bar-block">
+        <h3>Total VA + VT por empresa</h3>
+        <div id="barEmpresa"></div>
+      </div>
+      <div class="bar-block">
+        <h3>Colaboradores por função</h3>
+        <div id="barFuncao"></div>
+      </div>
+    </div>
+    <div class="bar-block">
+      <h3>Ocorrências por motivo (mês)</h3>
+      <div id="barMotivo"></div>
+    </div>
+  </section>
+
+  <!-- ===================== CADASTRO ===================== -->
+  <section class="panel" id="panel-cadastro">
+    <h2 class="section-title">Cadastro</h2>
+    <p class="section-desc">Colaboradores, empresa, funcao e valores diarios de VA/VT. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
+    <div class="toolbar">
+      <input type="text" id="cadBusca" placeholder="Buscar por nome…">
+      <select id="cadFiltroEmpresa"><option value="">Todas empresas</option></select>
+      <select id="cadFiltroFuncao"><option value="">Todas funcoes</option></select>
+      <div class="spacer"></div>
+      <span class="save-indicator" id="cadSaveInd">salvo</span>
+      <button class="btn ghost" id="btnExportCadXlsx" title="Baixar cadastro em Excel">⬇ Excel</button>
+      <button class="btn ghost" id="btnExportCadPdf" title="Baixar cadastro em PDF">⬇ PDF</button>
+      <button class="btn primary" id="btnAddCadastro">+ Colaborador</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tblCadastro">
+        <thead><tr>
+          <th>Nome</th><th>Empresa</th><th>Funcao</th><th>VA diario</th><th>VT diario</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== OCORRENCIAS ===================== -->
+  <section class="panel" id="panel-ocorrencias">
+    <h2 class="section-title">Ocorrências</h2>
+    <p class="section-desc">Faltas, folgas, home office, horas de sábado/domingo, adicional noturno, dias extra de VA/VT e dobras. Lançamento novo vem em branco — preenchimento é manual. Horas em formato 00:00. Depois de conferido, clique no 🔓 para travar (🔒) e proteger contra alterações. O desconto de cada motivo segue a aba <strong>Motivos</strong>. <strong>Férias:</strong> sempre preencha Data e Fim (férias) — o desconto de VA/VT é calculado automaticamente só nos dias úteis desse período, nunca nos dias corridos.</p>
+    <div class="legend">
+      <span><i style="background:var(--magenta)"></i> Falta ainda não revisada</span>
+      <span><i style="background:var(--amber)"></i> Possível duplicidade — mesmo colaborador, data e motivo lançados mais de uma vez</span>
+      <span>⚠ ao lado do Lanche = tem Adicional Noturno mas o Lanche não está marcado</span>
+    </div>
+    <div class="kpi-grid" id="ocKpiGrid" style="margin-bottom:16px;"></div>
+    <div class="toolbar">
+      <input type="text" id="ocBusca" placeholder="Buscar por nome…">
+      <select id="ocFiltroMotivo"><option value="">Todos motivos</option></select>
+      <input type="date" id="ocFiltroData">
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+        <input type="checkbox" id="ocSoNaoRevisadas" style="width:auto;"> só pendentes de revisão
+      </label>
+      <div class="spacer"></div>
+      <span class="save-indicator" id="ocSaveInd">salvo</span>
+      <button class="btn" id="btnExportOcCsv">Exportar CSV</button>
+      <button class="btn" id="btnExportOcXlsx">Exportar XLSX</button>
+      <button class="btn" id="btnExportOcPdf">Exportar PDF</button>
+      <button class="btn primary" id="btnAddOcorrencia">+ Ocorrência</button>
+    </div>
+    <div class="bulk-bar" id="ocBulkBar" style="display:none;">
+      <span id="ocBulkCount">0 selecionado(s)</span>
+      <div class="spacer"></div>
+      <button class="btn" id="btnBulkConferir">🔒 Conferir selecionados</button>
+      <button class="btn" id="btnBulkDestravar">🔓 Destravar selecionados</button>
+      <button class="btn danger" id="btnBulkRemover">✕ Remover selecionados</button>
+      <button class="btn ghost" id="btnBulkLimpar">Limpar seleção</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tblOcorrencias">
+        <thead><tr>
+          <th style="width:34px; text-align:center;"><input type="checkbox" id="ocSelecionarTodos" title="Selecionar todos os visíveis"></th>
+          <th class="sortable" data-sort="data">Data <span class="arrow">▾</span></th><th>Fim (férias)</th><th class="sortable" data-sort="nome">Nome <span class="arrow">▾</span></th><th class="sortable" data-sort="motivo">Motivo <span class="arrow">▾</span></th><th>Dias</th><th>H. Sábado (50%)</th><th>H. Domingo (100%)</th>
+          <th>Ad. Noturno</th><th>Lanche</th><th>Dias VA/VT</th><th>Dobras VA</th><th>Conferido</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== MOTIVOS ===================== -->
+  <section class="panel" id="panel-motivos">
+    <h2 class="section-title">Motivos</h2>
+    <p class="section-desc">Catálogo de motivos do sistema de ponto. Aqui você define quais motivos descontam VA e/ou VT no fechamento — mude o que precisar, é usado em todos os meses. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
+    <div class="kpi-grid" id="moKpiGrid" style="margin-bottom:16px;"></div>
+    <div class="toolbar">
+      <input type="text" id="moBusca" placeholder="Buscar motivo…">
+      <div class="spacer"></div>
+      <span class="save-indicator" id="moSaveInd">salvo</span>
+      <button class="btn primary" id="btnAddMotivo">+ Motivo</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tblMotivos">
+        <thead><tr>
+          <th>Motivo (sistema de ponto)</th><th>Motivo na folha</th><th>Desconta VA</th><th>Desconta VT</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== FECHAMENTO ===================== -->
+  <section class="panel" id="panel-fechamento">
+    <h2 class="section-title">Fechamento</h2>
+    <p class="section-desc">Recalcula automaticamente a partir do Cadastro + Ocorrências, replicando a lógica da planilha original.</p>
+    <div class="bar-block" id="diasUteisPorEmpresaBlock">
+      <h3>Dias úteis por empresa</h3>
+      <p class="footnote" style="margin-top:-6px;">Cada empresa pode ter uma dinâmica diferente de dias úteis no mês. Deixe em branco para usar o padrão do mês.</p>
+      <div class="toolbar" style="margin-bottom:0;">
+        <label style="font-size:12px;color:var(--muted);">Padrão do mês</label>
+        <input type="number" id="diasUteisMes" min="0" max="31" step="1">
+        <span class="save-indicator" id="feSaveInd">salvo</span>
+      </div>
+      <div id="diasUteisEmpresaLista" style="display:flex; gap:16px; flex-wrap:wrap; margin-top:12px;"></div>
+    </div>
+    <div class="toolbar">
+      <input type="text" id="feBusca" placeholder="Buscar por colaborador…">
+      <select id="feFiltroEmpresa"><option value="">Todas empresas</option></select>
+      <div class="spacer"></div>
+      <span class="footnote" style="margin:0;">Exporta o que está filtrado acima (tudo, por empresa ou por colaborador)</span>
+      <button class="btn" id="btnExportCsv">⬇ CSV</button>
+      <button class="btn" id="btnExportXlsx">⬇ Planilha (.xlsx)</button>
+      <button class="btn primary" id="btnExportPdf">⬇ PDF</button>
+    </div>
+    <div class="legend">
+      <span><i style="background:var(--amber)"></i> Desconto de VA/VT definido por motivo na aba Motivos</span>
+      <span><i style="background:var(--cyan)"></i> Dias extra = coluna "Dias VA/VT" das ocorrências</span>
+      <span><i style="background:var(--magenta)"></i> Dobras = coluna "Dobras VA"</span>
+      <span><i style="background:var(--green)"></i> Lanche = marcado em "Ad. Noturno"; soma dia de VA e desconta 1 dia de VT</span>
+    </div>
+    <div class="table-wrap">
+      <table id="tblFechamento">
+        <thead>
+          <tr class="group-row">
+            <th colspan="2">Colaborador</th>
+            <th colspan="3" class="grp-l">Dias base do mês</th>
+            <th colspan="3" class="grp-l">Ajustes (extra · dobra · lanche)</th>
+            <th colspan="2" class="grp-l">Total em dias</th>
+            <th colspan="2" class="grp-l">Valores R$</th>
+            <th colspan="3" class="grp-l">Horas lançadas</th>
+            <th class="grp-l">Resultado</th>
+          </tr>
+          <tr>
+            <th>Nome</th><th>Empresa</th>
+            <th class="num-h grp-l">Dias úteis</th><th class="num-h">Desc. VA</th><th class="num-h">Desc. VT</th>
+            <th class="num-h grp-l">Dias extra</th><th class="num-h">Dobras</th><th class="num-h">Dias Lanche</th>
+            <th class="num-h grp-l">Total dias VA</th><th class="num-h">Total dias VT</th>
+            <th class="num-h grp-l">Valor VA</th><th class="num-h">Valor VT</th>
+            <th class="num-h grp-l">H. Sáb. (50%)</th><th class="num-h">H. Dom. (100%)</th><th class="num-h">H. Not.</th>
+            <th class="num-h grp-l">Total R$</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== ANOTAÇÕES FINANCEIRAS ===================== -->
+  <section class="panel" id="panel-anotacoes">
+    <h2 class="section-title">Anotações Financeiras</h2>
+    <p class="section-desc">Registro avulso de descontos e pagamentos por colaborador — multa de trânsito, gratificação, vale/adiantamento, etc. <strong>É só um registro: não entra automaticamente no Total R$ do Fechamento.</strong> Os tipos disponíveis são configuráveis logo abaixo, do mesmo jeito que os Motivos.</p>
+
+    <div class="bar-block" id="tiposFinanceirosBlock" style="margin-bottom:16px;">
+      <h3>Tipos de lançamento <span class="save-indicator" id="anTipoSaveInd" style="text-transform:none; letter-spacing:0; font-weight:400; margin-left:6px;">salvo</span></h3>
+      <div class="table-wrap" style="max-height:220px;">
+        <table id="tblTiposFinanceiros">
+          <thead><tr><th>Tipo</th><th>Natureza</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;"><button class="btn" id="btnAddTipoFinanceiro">+ Tipo</button></div>
+    </div>
+
+    <div class="kpi-grid" id="anKpiGrid" style="margin-bottom:16px;"></div>
+
+    <div class="toolbar">
+      <input type="text" id="anBusca" placeholder="Buscar por nome…">
+      <select id="anFiltroTipo"><option value="">Todos os tipos</option></select>
+      <select id="anFiltroNatureza">
+        <option value="">Descontos e pagamentos</option>
+        <option value="desconto">Só descontos</option>
+        <option value="pagamento">Só pagamentos</option>
+      </select>
+      <input type="date" id="anFiltroData">
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+        <input type="checkbox" id="anSoNaoConferidos" style="width:auto;"> só pendentes de conferência
+      </label>
+      <div class="spacer"></div>
+      <span class="save-indicator" id="anSaveInd">salvo</span>
+      <button class="btn" id="btnExportAnXlsx">Exportar XLSX</button>
+      <button class="btn" id="btnExportAnPdf">Exportar PDF</button>
+      <button class="btn primary" id="btnAddLancamento">+ Lançamento</button>
+    </div>
+    <div class="table-wrap">
+      <table id="tblAnotacoes">
+        <thead><tr>
+          <th>Data</th><th>Colaborador</th><th>Tipo</th><th>Natureza</th><th>Valor R$</th><th>Observação</th><th>Conferido</th><th></th>
+        </tr></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <!-- ===================== SINCRONIZAR ===================== -->
+  <section class="panel" id="panel-sincronizar">
+    <h2 class="section-title">Sincronizar planilha</h2>
+    <p class="section-desc">Cada mês fica guardado separado (é o seu "banco de dados mensal"). O painel reconhece sozinho o tipo de arquivo — só escolha o mês de destino e solte o .xlsx ou o .pdf.</p>
+    <div class="toolbar">
+      <label style="font-size:12px;color:var(--muted);">Importar para o mês</label>
+      <input type="month" id="syncMesAlvo">
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <div><strong>Clique para escolher</strong> ou arraste o arquivo aqui (.xlsx ou .pdf)</div>
+      <div class="footnote">
+        Reconhece 4 tipos de arquivo automaticamente:<br>
+        1) <strong>Lançamentos mensal completo</strong> (.xlsx) — abas "CADASTRO" e "OCORRENCIAS"<br>
+        2) <strong>Cadastro de Motivos</strong> (.xlsx) — catálogo com colunas Motivo / Motivo Folha / Desconta VA / Desconta VT<br>
+        3) <strong>Relatórios do sistema de ponto</strong> (.xlsx) — faltas, atestados médicos, banco de horas positivo/negativo, férias mensal, férias coletiva (soma às ocorrências do mês, não substitui)<br>
+        4) <strong>Cartão Ponto</strong> (.pdf, formato TIRVU) — lê a coluna "Observações" de cada colaborador e lança automaticamente uma ocorrência pra cada dia com motivo preenchido (soma às ocorrências do mês, não substitui)
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.pdf" style="display:none">
+    </div>
+    <div id="syncStatus"></div>
+    <div class="bar-block">
+      <h3>Mês atualmente aberto: <span id="mesAtualNome" style="color:var(--amber);"></span></h3>
+      <div id="baseAtualInfo" style="font-family:var(--mono); font-size:12.5px; color:var(--muted); line-height:1.8;"></div>
+      <button class="btn danger ghost" id="btnResetBase" style="margin-top:10px;">↺ Restaurar/limpar este mês</button>
+    </div>
+    <div class="bar-block">
+      <h3>Todos os meses guardados</h3>
+      <div id="listaMeses" style="font-family:var(--mono); font-size:12.5px; line-height:2;"></div>
+    </div>
+  </section>
+
+</main>
+
+<script id="cadastro-data" type="application/json">[{"nome": "ADELANDIA BATISTA DO NASCIMENTO", "empresa": "ILED SP", "va": 32.0, "vt": 22.6, "funcao": "ADM"}, {"nome": "ADENILSON CARLOS CORREIA", "empresa": "ILED SP", "va": 32.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ADRIANO ALVES TEODORO", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ALEXANDRE HENRIQUE RODRIGUES DA SILVA", "empresa": "NEW ILED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "ALEXANDRE VERAS MARINHO TOMAZ", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "COMERCIAL"}, {"nome": "ALEXSANDER DA SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "AZOR GEROME ROBINSON N DAY", "empresa": "ILED SP", "va": 32.0, "vt": 28.0, "funcao": "ESTOQUE"}, {"nome": "BETANIO ALVES DE FREITA COSTA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "BRENO CORREIA DE LIMA", "empresa": "ILED SP", "va": 32.0, "vt": 23.2, "funcao": "LABORATORIO"}, {"nome": "BRUNA FREIRE DA SILVA", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "CARLOS ANDRE PESSOA MARQUES", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "CAUA PEREIRA DE LIMA OLIVEIRA", "empresa": "NEW ILED", "va": 30.0, "vt": 18.6, "funcao": "LABORATORIO"}, {"nome": "CHARLES GUABIRABA GONCALVES", "empresa": "ILED SP", "va": 32.0, "vt": 24.4, "funcao": "ESTOQUE"}, {"nome": "CICERO FRANCISCO DA SILVA JUNIOR", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "COMERCIAL"}, {"nome": "CLAUDIO FELIX RODRIGUES", "empresa": "ILED SP", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "CLEBER PEREIRA DOS ANJOS", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "DAIRTON LOPES AGUIAR", "empresa": "NEW ILED", "va": 30.0, "vt": 20.7, "funcao": "LABORATORIO"}, {"nome": "EDUARDO CARVALHO FRUTUOSO", "empresa": "NEW ILED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "EMERSON PEREIRA MARTINS", "empresa": "NEW ILED", "va": 30.0, "vt": 18.6, "funcao": "LABORATORIO"}, {"nome": "ELTON SANCHES DE SOUZA GOMES", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "ERICK SOUSA OLIVEIRA", "empresa": "NEW ILED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "EVANDRO APARECIDO MOREIRA SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "FERNANDO GOMES DE OLIVEIRA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "FELIPE RODRIGUES DE OLIVEIRA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "FLAVIO AUGUSTO DE SOUSA PENHA", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "FREDERIQUE LUIZ DA SILVA", "empresa": "ILED SP", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "FILIPE ERNESTO FERREIRA", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "LABORATORIO"}, {"nome": "GUILHERME ELIEZER VIAN", "empresa": "ILED SP", "va": 32.0, "vt": 24.4, "funcao": "ESTOQUE"}, {"nome": "GABRIEL SOARES FERREIRA", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "HENRIQUE SANTANA SILVA", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "HENRIQUE WENDELL FREITAS RODRIGUES", "empresa": "ILED SP", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ISADORA DE MARCO PEREIRA", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "HAYKEL PINHEIRO BARBOSA", "empresa": "RED", "va": 30.0, "vt": 22.3, "funcao": "COMERCIAL"}, {"nome": "JAILSON ARAUJO COSTA", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "JOAO PEDRO FERNANDES OLIVEIRA", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "JOAO VITOR SANTOS E SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 49.5, "funcao": "LABORATORIO"}, {"nome": "JEAN DA SILVA FERNANDES", "empresa": "RED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "JOSE ROMANO NETO", "empresa": "ILED SP", "va": 32.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "JULIO CESAR ALVES GALVAO", "empresa": "NEW ILED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "LUCAS ALVES DA SILVA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "LUCAS SABINO DE AGUIAR", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "LUCAS SOUSA MENEZES", "empresa": "ILED SP", "va": 32.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "LUCAS VINICIUS PESSOA COSTA", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "COMERCIAL"}, {"nome": "LUCAS BATISTA RIBEIRO", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "LUIZ AUGUSTO DE SOUSA MORORO", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "LABORATORIO"}, {"nome": "LUIZ SANTOS MUNIZ", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "MARCELO NOBRE BEZERRA", "empresa": "NEW ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "MARCUS VINICIUS CALIXTO DE AMORIM", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "LABORATORIO"}, {"nome": "MARIA EDENIA BARBOSA PEREIRA", "empresa": "NEW ILED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "MATHEUS CLEMENTE DE SOUZA", "empresa": "ILED SP", "va": 32.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "MARIA APARECIDA SILVA DOS SANTOS", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "MATHEUS RODRIGUES DE MORAES", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "MAURICIO FERREIRA DA SILVA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "MAYCON RODRIGUES DIAS", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "NAUAM COSTA DA SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "PABLO AUGUSTO FERNANDES MARTINS", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "PAULO MIQUEIAS NERI SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 24.4, "funcao": "LABORATORIO"}, {"nome": "PEDRO HENRIQUE GOMES MELO NOBRE", "empresa": "NEW ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "VITOR ROCHA MARTINS", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "ANDREIA DE LACERDA DOS SANTOS", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "MIRTHES GOMES MELO NOBRE", "empresa": "X- LED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "PEDRO PEREIRA DOS SANTOS JUNIOR", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "RICHARD FERNANDO DOS SANTOS SOUSA", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "ESTOQUE"}, {"nome": "RIKELME PEREIRA SANTOS", "empresa": "ILED", "va": 30.0, "vt": 22.9, "funcao": "LABORATORIO"}, {"nome": "GUSTAVO MIRANDA", "empresa": "ILED SP", "va": 32.0, "vt": 25.1, "funcao": "ESTOQUE"}, {"nome": "ROBERTO DIONISIO DA SILVA NETO", "empresa": "ILED SP", "va": 32.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ROBSON PEREIRA DA SILVA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ROGERIO ARAUJO LIMA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "ROGERIO DE JESUS RODRIGUES LOPES", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "RUDNEY SILVA FONSECA", "empresa": "ILED SP", "va": 0.0, "vt": 54.4, "funcao": "EXTERNA"}, {"nome": "SILVIO PIERRE MONTEIRO DOS SANTOS", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "TAISE DE MELO BITO", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "COMERCIAL"}, {"nome": "THIGANA PEREIRA DE SOUSA DOS SANTOS", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "TIAGO MONTEIRO DA SILVA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "WESLEY DIAS DE SOUZA", "empresa": "ILED", "va": 0.0, "vt": 0.0, "funcao": "EXTERNA"}, {"nome": "PAULO ROBERTO BRAGA SOARES", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "WILLIAM JOSE CASTILLA JIMENEZ", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "WILLIAM OLIVEIRA DA SILVA", "empresa": "ILED", "va": 30.0, "vt": 15.0, "funcao": "CONTROLE"}, {"nome": "ANDREZA KAROLAINE PEIXOTO MOTA", "empresa": "RED", "va": 30.0, "vt": 15.0, "funcao": "ADM"}, {"nome": "WILLIAM RAMOS DA SILVA", "empresa": "ILED SP", "va": 32.0, "vt": 15.0, "funcao": "LABORATORIO"}]</script>
+<script id="ocorrencias-data" type="application/json">[{"data": "2026-06-05", "nome": "ANDREIA DE LACERDA DOS SANTOS", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-11", "nome": "ANDREIA DE LACERDA DOS SANTOS", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "ANDREIA DE LACERDA DOS SANTOS", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "ANDREZA KAROLAINE PEIXOTO MOTA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "ANDREZA KAROLAINE PEIXOTO MOTA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-06", "nome": "ELTON SANCHES DE SOUZA GOMES", "motivo": "TRABALHO FDS", "horasSabado": 4.3667, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-17", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-18", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-19", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-22", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-24", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-25", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "FILIPE ERNESTO FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-19", "nome": "GABRIEL SOARES FERREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-27", "nome": "GABRIEL SOARES FERREIRA", "motivo": "TRABALHO FDS", "horasSabado": 9.5167, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "GABRIEL SOARES FERREIRA", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 8.0833, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "HAYKEL PINHEIRO BARBOSA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-24", "nome": "JEAN DA SILVA FERNANDES", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-01", "nome": "LUCAS BATISTA RIBEIRO", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-02", "nome": "LUCAS BATISTA RIBEIRO", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "LUCAS BATISTA RIBEIRO", "motivo": "TRABALHO FDS", "horasSabado": 3.95, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "LUCAS BATISTA RIBEIRO", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 9.0333, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-11", "nome": "MARCUS VINÍCIUS CALIXTO DE AMORIM", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "MARIA APARECIDA SILVA DOS SANTOS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-18", "nome": "MATHEUS RODRIGUES DE MORAES", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "MATHEUS RODRIGUES DE MORAES", "motivo": "TRABALHO FDS", "horasSabado": 9.2833, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "MATHEUS RODRIGUES DE MORAES", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 7.65, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-13", "nome": "PEDRO PEREIRA DOS SANTOS JUNIOR", "motivo": "TRABALHO FDS", "horasSabado": 1.8833, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-30", "nome": "PEDRO PEREIRA DOS SANTOS JUNIOR", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-19", "nome": "VITOR ROCHA MARTINS", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "VITOR ROCHA MARTINS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "VITOR ROCHA MARTINS", "motivo": "TRABALHO FDS", "horasSabado": 9.0333, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "VITOR ROCHA MARTINS", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 8.2, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "WILLIAM JOSE CASTILLA JIMENEZ", "motivo": "TRABALHO FDS", "horasSabado": 8.9167, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "WILLIAM JOSE CASTILLA JIMENEZ", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 7.8333, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "ALEXANDRE HENRIQUE RODRIGUES DA SILVA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "ALEXANDRE HENRIQUE RODRIGUES DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-30", "nome": "ALEXANDRE HENRIQUE RODRIGUES DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-01", "nome": "BRUNA FREIRE DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-02", "nome": "BRUNA FREIRE DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-03", "nome": "BRUNA FREIRE DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-04", "nome": "BRUNA FREIRE DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "BRUNA FREIRE DA SILVA", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-11", "nome": "BRUNA FREIRE DA SILVA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "BRUNA FREIRE DA SILVA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-15", "nome": "CLEBER PEREIRA DOS ANJOS", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-16", "nome": "CLEBER PEREIRA DOS ANJOS", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-17", "nome": "CLEBER PEREIRA DOS ANJOS", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "CLEBER PEREIRA DOS ANJOS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "DAIRTON LOPES AGUIAR", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 6.7667, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "EDUARDO CARVALHO FRUTUOSO", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-03", "nome": "EMERSON PEREIRA MARTINS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "EMERSON PEREIRA MARTINS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-08", "nome": "EMERSON PEREIRA MARTINS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-09", "nome": "EMERSON PEREIRA MARTINS", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-15", "nome": "FLAVIO AUGUSTO DE SOUSA PENHA", "motivo": "FALTA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-24", "nome": "ISADORA DE MARCO PEREIRA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-25", "nome": "ISADORA DE MARCO PEREIRA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "ISADORA DE MARCO PEREIRA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-15", "nome": "MIRTHES GOMES MELO NOBRE", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-16", "nome": "MIRTHES GOMES MELO NOBRE", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-12", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FALTA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-15", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-16", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-17", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-18", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-19", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-22", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-24", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-25", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-30", "nome": "JÚLIO CÉSAR ALVES GALVÃO", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-10", "nome": "LUIZ AUGUSTO DE SOUSA MORORO", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-03", "nome": "MARIA EDENIA BARBOSA PEREIRA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "MARIA EDENIA BARBOSA PEREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "MARIA EDENIA BARBOSA PEREIRA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "MARIA EDENIA BARBOSA PEREIRA", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "CICERO FRANCISCO DA SILVA JUNIOR", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "MIRTHES GOMES MELO NOBRE", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-29", "nome": "ISADORA DE MARCO PEREIRA", "motivo": "HOME OFFICE", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "ADELÂNDIA BATISTA DO NASCIMENTO", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-01", "nome": "ADELÂNDIA BATISTA DO NASCIMENTO", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-17", "nome": "ALEXSANDER DA SILVA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-18", "nome": "ALEXSANDER DA SILVA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-27", "nome": "ALEXSANDER DA SILVA", "motivo": "TRABALHO FDS", "horasSabado": 1.2, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "BRENO CORREIA DE LIMA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-27", "nome": "CHARLES GUABIRABA GONCALVES", "motivo": "TRABALHO FDS", "horasSabado": 1.2, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-22", "nome": "GUILHERME ELIEZER VIAN", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "GUILHERME ELIEZER VIAN", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-18", "nome": "JOÃO VITOR SANTOS E SILVA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-21", "nome": "JOSÉ ROMANO NETO", "motivo": "TRABALHO FDS", "horasSabado": 2.75, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-08", "nome": "NAUAM COSTA DA SILVA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-15", "nome": "PAULO MIQUEIAS NERI SILVA", "motivo": "ATESTADO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "AZOR GEROME ROBINSON N DAY", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-01", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-02", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-03", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-08", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-09", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-10", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-11", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-12", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-23", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-24", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-25", "nome": "HENRIQUE SANTANA SILVA", "motivo": "TRABALHO EXTERNO", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-28", "nome": "LUIZ SANTOS MUNIZ", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 7.7667, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-13", "nome": "RICHARD FERNANDO DOS SANTOS SOUSA", "motivo": "TRABALHO FDS", "horasSabado": 1.8833, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "SILVIO PIERRE MONTEIRO DOS SANTOS", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-27", "nome": "SILVIO PIERRE MONTEIRO DOS SANTOS", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 6.8167, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-02", "nome": "WILLIAM OLIVEIRA DA SILVA", "motivo": "TRABALHO FDS", "horasSabado": 0.0, "horasDomingo": 8.1167, "adicionalNoturno": 0.0, "diasVaVt": 1.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-02", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-03", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-04", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-05", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-08", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-09", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-10", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-11", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-12", "nome": "ALEXANDRE VERAS MARINHO TOMAZ", "motivo": "FÉRIAS", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "TAISE DE MELO BITO", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}, {"data": "2026-06-26", "nome": "PAULO ROBERTO BRAGA SOARES", "motivo": "FOLGA", "horasSabado": 0.0, "horasDomingo": 0.0, "adicionalNoturno": 0.0, "diasVaVt": 0.0, "dobrasVa": 0.0}]</script>
+<script id="motivos-data" type="application/json">[{"motivo": "ABONADO PELO GESTOR", "motivoFolha": "ABONADO PELO GESTOR", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "ATESTADO DE COMPARECIMENTO", "motivoFolha": "ATESTADO DE COMPARECIMENTO", "abona": true, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "ATESTADO MÉDICO", "motivoFolha": "ATESTADO MÉDICO", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "AUSENCIA DE HORAS POR SOLICITAÇÃO DO RH - LIDERANÇA", "motivoFolha": "AUSENCIA DE HORAS POR SOLICITAÇÃO DO RH - LIDERANÇA", "abona": true, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "BANCO DE HORAS - NEGATIVO", "motivoFolha": "BANCO DE HORAS - NEGATIVO", "abona": false, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "BANCO DE HORAS - POSITIVO", "motivoFolha": "BANCO DE HORAS - POSITIVO", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "DAY OFF", "motivoFolha": "DAY OFF", "abona": true, "impedePonto": true, "descontaVA": false, "descontaVT": false}, {"motivo": "DECLARAÇÃO DE COMPARECIMENTO", "motivoFolha": "DECLARAÇÃO DE COMPARECIMENTO", "abona": true, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "DECLARAÇÃO DE COMPARECIMENTO - DIA", "motivoFolha": "DECLARAÇÃO DE COMPARECIMENTO - DIA", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "DEMANDA GALPÃO", "motivoFolha": "DEMANDA GALPÃO", "abona": false, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "DIA ABONADO PELO GESTOR", "motivoFolha": "DIA ABONADO PELO GESTOR", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "FALTA", "motivoFolha": "FALTA", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "FALTA INJUSTIFICADA", "motivoFolha": "FALTA INJUSTIFICADA", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "FALTA JUSTIFICADA", "motivoFolha": "FALTA JUSTIFICADA", "abona": true, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "FOLGA", "motivoFolha": "FOLGA", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "FÉRIAS", "motivoFolha": "FÉRIAS", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "FÉRIAS COLETIVA", "motivoFolha": "FÉRIAS COLETIVA", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "FÉRIAS MENSAL", "motivoFolha": "FÉRIAS MENSAL", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "HOME OFFICE", "motivoFolha": "HOME OFFICE", "abona": true, "impedePonto": true, "descontaVA": false, "descontaVT": true}, {"motivo": "HORA EXTRA FIM DE SEMANA", "motivoFolha": "HORA EXTRA FIM DE SEMANA", "abona": false, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "HORAS ABATIDAS", "motivoFolha": "HORAS ABATIDAS", "abona": false, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "HRS ABONADAS PELO GESTOR", "motivoFolha": "HRS ABONADAS PELO GESTOR", "abona": false, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "HRS NEG. JUSTIFICADAS - BANCO NEGATIVO", "motivoFolha": "HRS NEG. JUSTIFICADAS - BANCO NEGATIVO", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "LIBERADO PELO GESTOR - SEM DESCONTO HRS", "motivoFolha": "LIBERADO PELO GESTOR - SEM DESCONTO HRS", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "LICENCA PATERNIDADE", "motivoFolha": "LICENCA PATERNIDADE", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "LICENÇA CASAMENTO", "motivoFolha": "LICENÇA CASAMENTO", "abona": true, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "LIÇENCA PATERNIDADE", "motivoFolha": "LIÇENCA PATERNIDADE", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "PAGAR LANCHE", "motivoFolha": "PAGAR LANCHE", "abona": false, "impedePonto": false, "descontaVA": false, "descontaVT": false}, {"motivo": "SALDO EM BANCO DE HRS - NEGATIVO", "motivoFolha": "SALDO EM BANCO DE HRS - NEGATIVO", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "SALDO EM BANCO DE HRS - POSITIVO", "motivoFolha": "SALDO EM BANCO DE HRS - POSITIVO", "abona": false, "impedePonto": false, "descontaVA": true, "descontaVT": true}, {"motivo": "SUSPENSÃO", "motivoFolha": "SUSPENSÃO", "abona": true, "impedePonto": true, "descontaVA": true, "descontaVT": true}, {"motivo": "TESTE PONTO", "motivoFolha": "TESTE PONTO", "abona": true, "impedePonto": true, "descontaVA": false, "descontaVT": false}, {"motivo": "TRABALHO EXTERNO", "motivoFolha": "TRABALHO EXTERNO", "abona": true, "impedePonto": true, "descontaVA": false, "descontaVT": false}]</script>
+
+<script>
+// =====================================================================
+// ILed Produções · Controle de Lançamentos para Folha de Pagamento — lógica do painel
+// =====================================================================
+
+// ---------------------------------------------------------------
+// Armazenamento: usa o storage do Claude quando disponível (dentro do
+// chat); fora daqui (arquivo aberto direto no Chrome, favoritado etc.)
+// usa o localStorage do próprio navegador — assim o painel funciona
+// 100% sozinho, sem depender de internet ou do Claude.
+// ---------------------------------------------------------------
+if (!window.storage){
+  const PREFIXO = 'iled-folha:';
+  window.storage = {
+    async get(key, shared){
+      try{
+        const raw = localStorage.getItem(PREFIXO + key);
+        if (raw === null) throw new Error('not found');
+        return { key, value: raw, shared: !!shared };
+      }catch(e){ throw e; }
+    },
+    async set(key, value, shared){
+      localStorage.setItem(PREFIXO + key, value);
+      return { key, value, shared: !!shared };
+    },
+    async delete(key, shared){
+      localStorage.removeItem(PREFIXO + key);
+      return { key, deleted:true, shared: !!shared };
+    },
+    async list(prefix, shared){
+      const p = PREFIXO + (prefix||'');
+      const keys = [];
+      for (let i=0;i<localStorage.length;i++){
+        const k = localStorage.key(i);
+        if (k && k.startsWith(p)) keys.push(k.slice(PREFIXO.length));
+      }
+      return { keys, prefix: prefix||'', shared: !!shared };
+    }
+  };
+}
+
+const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+const EMPRESA_CORES = {
+  'ILED': '#ffb020', 'ILED SP': '#29d3c6', 'NEW ILED': '#6ee787',
+  'X- LED': '#ff4d6a', 'RED': '#c792ea',
+};
+function corEmpresa(nome){
+  if (EMPRESA_CORES[nome]) return EMPRESA_CORES[nome];
+  let h = 0; for (const c of nome) h = (h*31 + c.charCodeAt(0)) % 360;
+  return `hsl(${h},60%,60%)`;
+}
+
+const ORIGINAL_CADASTRO = JSON.parse(document.getElementById('cadastro-data').textContent);
+const ORIGINAL_OCORRENCIAS = JSON.parse(document.getElementById('ocorrencias-data').textContent);
+const ORIGINAL_MOTIVOS = JSON.parse(document.getElementById('motivos-data').textContent);
+const MES_SEMENTE = '2026-06'; // mês que veio junto com o painel
+
+// ---------------------------------------------------------------
+// Estado em memória
+// ---------------------------------------------------------------
+let mesesDisponiveis = [];      // ['2026-06','2026-07', ...]
+let mesAtivo = MES_SEMENTE;     // chave do mês atualmente aberto
+let cadastro = [];
+let ocorrencias = [];
+let ocOrdenacao = { campo:'nome', dir:'asc' }; // ordenação clicável da tabela de Ocorrências (padrão: alfabético)
+let ocSelecionados = new Set(); // índices (_i) das ocorrências marcadas na caixinha de seleção
+let diasUteisMes = 23;
+let diasUteisPorEmpresa = {}; // override por empresa — cada empresa pode ter dinâmica diferente
+let baseInfo = { fonte: 'Base original enviada', atualizadoEm: null };
+let catalogoMotivos = [];       // global, compartilhado entre todos os meses
+let lancamentosFinanceiros = []; // anotações de desconto/pagamento do mês ativo — não entra no cálculo do Fechamento
+let catalogoTiposFinanceiros = []; // global, compartilhado entre todos os meses
+const CATALOGO_FINANCEIRO_PADRAO = [
+  {tipo:'MULTA DE TRÂNSITO', natureza:'desconto', travado:false},
+  {tipo:'GRATIFICAÇÃO', natureza:'pagamento', travado:false},
+  {tipo:'VALE / ADIANTAMENTO', natureza:'desconto', travado:false},
+];
+
+const fmtBRL = v => (v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+const fmtNum = v => (v||0).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:2});
+const normHeader = s => String(s??'').trim().toUpperCase();
+
+// Converte valores vindos da planilha (podem chegar como número puro OU como
+// texto no formato brasileiro "1.234,56") para Number correto.
+// Corrige o bug de casas decimais erradas: parseFloat("1.234,56") sozinho
+// retornava 1.234, cortando os centavos.
+function parseNumeroBR(v){
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  let s = String(v).trim();
+  if (s === '') return 0;
+  s = s.replace(/^R\$\s*/i, '').trim();
+  const temVirgula = s.includes(',');
+  const temPonto = s.includes('.');
+  if (temVirgula && temPonto){
+    // formato brasileiro: "1.234,56" -> milhar=ponto, decimal=vírgula
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (temVirgula){
+    // "1234,56" -> "1234.56"
+    s = s.replace(',', '.');
+  } else if (temPonto){
+    // ambíguo: "1.234" (milhar) vs "1234.56" (decimal).
+    // Se houver mais de um ponto, ou o último grupo após o ponto tem
+    // exatamente 3 dígitos, tratamos como separador de milhar.
+    const partes = s.split('.');
+    const ultima = partes[partes.length-1];
+    if (partes.length > 2 || ultima.length === 3){
+      s = partes.join('');
+    }
+    // senão mantém como decimal normal (ex: "1234.56")
+  }
+  const n = parseFloat(s);
+  return isFinite(n) ? n : 0;
+}
+
+// ---------------------------------------------------------------
+// Horas em formato 00:00 (o dado continua guardado em decimal,
+// só a exibição/edição é convertida — assim não perdemos casas
+// decimais que vêm do sistema de ponto, ex: 4.3667h => 04:22)
+// ---------------------------------------------------------------
+function decParaHora(dec){
+  dec = Number(dec) || 0;
+  const neg = dec < 0; dec = Math.abs(dec);
+  let h = Math.floor(dec + 1e-9);
+  let m = Math.round((dec - h) * 60);
+  if (m === 60){ m = 0; h += 1; }
+  return (neg?'-':'') + String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+}
+function horaParaDec(str){
+  if (str == null || str === '') return 0;
+  str = String(str).trim();
+  const neg = str.startsWith('-');
+  if (neg) str = str.slice(1);
+  const m = str.match(/^(\d{1,3}):([0-5]?\d)$/);
+  if (m){
+    const val = Number(m[1]) + Number(m[2])/60;
+    return neg ? -val : val;
+  }
+  const dec = parseFloat(str.replace(',','.'));
+  if (isNaN(dec)) return 0;
+  return neg ? -dec : dec;
+}
+
+// UF's que não entram mais no catálogo de motivos (eventos/locações
+// identificados por estado, ex: "DF - ...", "SP - ...")
+const UF_MOTIVO_RE = /(^|\s)(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\s*-/;
+function removerMotivosUF(lista){
+  return (lista||[]).filter(m => !UF_MOTIVO_RE.test(m.motivo));
+}
+
+// ---------------------------------------------------------------
+// Dias úteis (seg-sex) dentro de um intervalo de datas — usado no
+// cálculo automático de férias
+// ---------------------------------------------------------------
+function diasUteisEntreDatas(ini, fim){
+  if (!ini || !fim) return null;
+  const d1 = new Date(ini+'T00:00:00'), d2 = new Date(fim+'T00:00:00');
+  if (isNaN(d1) || isNaN(d2) || d2 < d1) return null;
+  let count = 0;
+  for (let d = new Date(d1); d <= d2; d.setDate(d.getDate()+1)){
+    const dow = d.getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+function ehFerias(motivoRaw){
+  return nomeCanonico(motivoRaw).toUpperCase().includes('FÉRIAS');
+}
+
+function labelMes(chave){
+  const [ano, mes] = chave.split('-').map(Number);
+  return `${MES_NOMES[mes-1]}/${ano}`;
+}
+function diasUteisDoMes(chave){
+  const [ano, mes] = chave.split('-').map(Number);
+  const ultimoDia = new Date(ano, mes, 0).getDate();
+  let count = 0;
+  for (let d=1; d<=ultimoDia; d++){
+    const dow = new Date(ano, mes-1, d).getDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+function proximoMes(chave){
+  const [ano, mes] = chave.split('-').map(Number);
+  const d = new Date(ano, mes, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+// ---------------------------------------------------------------
+// Catálogo de motivos — sinônimos para nomes antigos/curtos
+// ---------------------------------------------------------------
+const SINONIMOS_MOTIVO = {
+  'FÉRIAS': 'FÉRIAS MENSAL',
+  'FERIAS': 'FÉRIAS MENSAL',
+  'SUSPENSAO': 'SUSPENSÃO',
+};
+function buscarMotivo(motivoRaw){
+  if (!motivoRaw) return null;
+  let alvo = normHeader(motivoRaw);
+  alvo = SINONIMOS_MOTIVO[alvo] || alvo;
+  return catalogoMotivos.find(c => normHeader(c.motivo)===alvo || normHeader(c.motivoFolha)===alvo) || null;
+}
+function nomeCanonico(motivoRaw){
+  const cat = buscarMotivo(motivoRaw);
+  return cat ? cat.motivoFolha : String(motivoRaw||'').trim();
+}
+
+// ---------------------------------------------------------------
+// Storage
+// ---------------------------------------------------------------
+const chaveStorageMes = chave => `mes:${chave}`;
+
+async function salvarIndiceMeses(){
+  try{ await window.storage.set('meses-indice', JSON.stringify(mesesDisponiveis), false); }
+  catch(e){ console.error('Erro ao salvar índice de meses', e); }
+}
+async function carregarIndiceMeses(){
+  try{
+    const r = await window.storage.get('meses-indice', false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+async function salvarMesAtivoPreferido(){
+  try{ await window.storage.set('mes-ativo', mesAtivo, false); }catch(e){}
+}
+async function carregarMesAtivoPreferido(){
+  try{
+    const r = await window.storage.get('mes-ativo', false);
+    if (r && r.value) return r.value;
+  }catch(e){}
+  return null;
+}
+async function salvarDadosMes(chave){
+  try{
+    await window.storage.set(chaveStorageMes(chave), JSON.stringify({ cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo }), false);
+    return true;
+  }catch(e){ console.error('Erro ao salvar mês', e); return false; }
+}
+async function carregarDadosMes(chave){
+  try{
+    const r = await window.storage.get(chaveStorageMes(chave), false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+async function salvarCatalogoMotivos(){
+  try{ await window.storage.set('catalogo-motivos', JSON.stringify(catalogoMotivos), false); return true; }
+  catch(e){ console.error('Erro ao salvar catálogo', e); return false; }
+}
+async function carregarCatalogoMotivos(){
+  try{
+    const r = await window.storage.get('catalogo-motivos', false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+async function salvarCatalogoFinanceiro(){
+  try{ await window.storage.set('catalogo-financeiro', JSON.stringify(catalogoTiposFinanceiros), false); return true; }
+  catch(e){ console.error('Erro ao salvar catálogo financeiro', e); return false; }
+}
+async function carregarCatalogoFinanceiro(){
+  try{
+    const r = await window.storage.get('catalogo-financeiro', false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+
+function flashSave(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'), 1200);
+}
+let saveTimer = null;
+function autoSave(indicatorId){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async ()=>{
+    await salvarDadosMes(mesAtivo);
+    if (indicatorId) flashSave(indicatorId);
+  }, 500);
+}
+let saveTimerMotivos = null;
+function autoSaveMotivos(){
+  clearTimeout(saveTimerMotivos);
+  saveTimerMotivos = setTimeout(async ()=>{
+    await salvarCatalogoMotivos();
+    flashSave('moSaveInd');
+  }, 500);
+}
+let saveTimerFinanceiro = null;
+function autoSaveCatalogoFinanceiro(){
+  clearTimeout(saveTimerFinanceiro);
+  saveTimerFinanceiro = setTimeout(async ()=>{
+    await salvarCatalogoFinanceiro();
+    flashSave('anTipoSaveInd');
+  }, 500);
+}
+
+// ---------------------------------------------------------------
+// Salvar tudo, sob demanda (botão) e como rede de segurança para
+// não perder lançamentos ao fechar a aba — dispara em várias
+// situações além do autosave por campo.
+// ---------------------------------------------------------------
+async function salvarTudo(mostrarFeedback){
+  clearTimeout(saveTimer);
+  clearTimeout(saveTimerMotivos);
+  clearTimeout(saveTimerFinanceiro);
+  await Promise.all([
+    salvarDadosMes(mesAtivo),
+    salvarCatalogoMotivos(),
+    salvarCatalogoFinanceiro(),
+    salvarIndiceMeses(),
+    salvarMesAtivoPreferido(),
+  ]);
+  if (mostrarFeedback) flashSave('globalSaveInd');
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') salvarTudo(false);
+});
+window.addEventListener('pagehide', () => { salvarTudo(false); });
+window.addEventListener('beforeunload', () => { salvarTudo(false); });
+setInterval(() => { salvarTudo(false); }, 20000);
+
+// ---------------------------------------------------------------
+// Lembrete de backup — o painel salva no navegador (localStorage
+// quando aberto fora do chat), que pode ser perdido se o arquivo
+// mudar de lugar, o cache for limpo etc. Lembra periodicamente de
+// baixar um backup de verdade (.json com tudo, todos os meses).
+// ---------------------------------------------------------------
+const LIMIAR_BACKUP_MS = 24 * 60 * 60 * 1000;   // lembra se faz +24h sem backup
+const LIMIAR_DISPENSA_MS = 4 * 60 * 60 * 1000;  // "lembrar mais tarde" volta em 4h
+
+async function carregarMarcador(chave){
+  try{ const r = await window.storage.get(chave, false); if (r && r.value) return Number(r.value); }catch(e){}
+  return null;
+}
+async function salvarMarcador(chave, valor){
+  try{ await window.storage.set(chave, String(valor), false); }catch(e){}
+}
+
+async function avaliarLembreteBackup(){
+  const el = document.getElementById('lembreteBackup');
+  if (!el) return;
+  const agora = Date.now();
+  const ultimoBackup = await carregarMarcador('ultimo-backup-em');
+  const dispensadoEm = await carregarMarcador('lembrete-backup-dispensado-em');
+
+  const precisaBackup = !ultimoBackup || (agora - ultimoBackup) > LIMIAR_BACKUP_MS;
+  const foiDispensadoRecente = dispensadoEm && (agora - dispensadoEm) < LIMIAR_DISPENSA_MS;
+
+  if (precisaBackup && !foiDispensadoRecente){
+    const desdeTxt = ultimoBackup
+      ? `Faz mais de ${Math.floor((agora-ultimoBackup)/3600000)}h que você não baixa um backup.`
+      : `Você ainda não baixou nenhum backup nesta sessão.`;
+    el.style.display = 'block';
+    el.innerHTML = `
+      <div class="alert-banner info">
+        <span class="alert-icon">💾</span>
+        <div>
+          <strong>Backup de segurança recomendado.</strong>
+          ${desdeTxt} Os dados ficam salvos no navegador — se o arquivo mudar de lugar, o cache for limpo ou você abrir em outro navegador/computador, o que não foi baixado pode se perder.
+        </div>
+        <div class="btn-row">
+          <button class="btn primary" id="btnBackupAgora">⬇ Baixar backup completo</button>
+          <button class="btn ghost" id="btnBackupDepois">Lembrar mais tarde</button>
+        </div>
+      </div>`;
+    document.getElementById('btnBackupAgora').addEventListener('click', async () => {
+      await exportarBackupCompleto();
+    });
+    document.getElementById('btnBackupDepois').addEventListener('click', async () => {
+      await salvarMarcador('lembrete-backup-dispensado-em', Date.now());
+      el.style.display = 'none';
+      el.innerHTML = '';
+    });
+  } else {
+    el.style.display = 'none';
+    el.innerHTML = '';
+  }
+}
+
+async function marcarBackupFeito(){
+  await salvarMarcador('ultimo-backup-em', Date.now());
+  const el = document.getElementById('lembreteBackup');
+  if (el){ el.style.display = 'none'; el.innerHTML = ''; }
+}
+
+async function exportarBackupCompleto(){
+  await salvarTudo(false); // garante que o que está em memória foi persistido antes do backup
+  const pacote = { geradoEm: new Date().toISOString(), mesesDisponiveis, catalogoMotivos, catalogoTiposFinanceiros, dados: {} };
+  for (const chave of mesesDisponiveis){
+    pacote.dados[chave] = (chave === mesAtivo)
+      ? { cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo }
+      : (await carregarDadosMes(chave)) || null;
+  }
+  const blob = new Blob([JSON.stringify(pacote, null, 2)], {type:'application/json'});
+  const hoje = new Date().toISOString().slice(0,10);
+  baixar(blob, `backup-iled-folha_${hoje}.json`);
+  await marcarBackupFeito();
+}
+
+// ---------------------------------------------------------------
+// Troca / criação de mês
+// ---------------------------------------------------------------
+async function abrirMes(chave){
+  mesAtivo = chave;
+  let dados = await carregarDadosMes(chave);
+  if (!dados){
+    dados = { cadastro: [], ocorrencias: [], lancamentosFinanceiros: [], diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {}, baseInfo: { fonte:'Mês criado em branco', atualizadoEm: new Date().toISOString() } };
+    await salvarDadosMes(chave);
+  }
+  cadastro = dados.cadastro || [];
+  ocorrencias = dados.ocorrencias || [];
+  lancamentosFinanceiros = dados.lancamentosFinanceiros || [];
+  diasUteisMes = dados.diasUteisMes ?? diasUteisDoMes(chave);
+  diasUteisPorEmpresa = dados.diasUteisPorEmpresa || {};
+  baseInfo = dados.baseInfo || { fonte:'—', atualizadoEm:null };
+  await salvarMesAtivoPreferido();
+  renderTudo();
+}
+
+async function criarNovoMes(){
+  const sugestao = proximoMes(mesesDisponiveis[mesesDisponiveis.length-1] || mesAtivo);
+  const escolha = prompt('Criar novo mês (formato AAAA-MM). O cadastro do mês atual será copiado; as ocorrências começam zeradas.', sugestao);
+  if (!escolha) return;
+  const chave = escolha.trim();
+  if (!/^\d{4}-\d{2}$/.test(chave)){ alert('Formato inválido. Use AAAA-MM, ex: 2026-07'); return; }
+  if (mesesDisponiveis.includes(chave)){
+    if (!confirm(`O mês ${labelMes(chave)} já existe. Abrir ele?`)) return;
+    await abrirMes(chave);
+    document.getElementById('selMes').value = chave;
+    return;
+  }
+  const cadastroOrigem = mesAtivo;
+  const novoCadastro = JSON.parse(JSON.stringify(cadastro));
+  mesesDisponiveis.push(chave);
+  mesesDisponiveis.sort();
+  await salvarIndiceMeses();
+
+  mesAtivo = chave;
+  cadastro = novoCadastro;
+  ocorrencias = [];
+  lancamentosFinanceiros = [];
+  diasUteisMes = diasUteisDoMes(chave);
+  diasUteisPorEmpresa = {};
+  baseInfo = { fonte: `Criado a partir do cadastro de ${labelMes(cadastroOrigem)}`, atualizadoEm: new Date().toISOString() };
+  await salvarDadosMes(chave);
+  await salvarMesAtivoPreferido();
+  popularSeletorMes();
+  renderTudo();
+}
+
+function popularSeletorMes(){
+  const sel = document.getElementById('selMes');
+  sel.innerHTML = mesesDisponiveis.map(c => `<option value="${c}" ${c===mesAtivo?'selected':''}>${labelMes(c)}</option>`).join('');
+}
+
+// ---------------------------------------------------------------
+// Cálculo de fechamento — desconto por motivo definido na aba Motivos
+// ---------------------------------------------------------------
+function diasUteisDaEmpresa(empresa){
+  const v = diasUteisPorEmpresa[empresa];
+  return (v === undefined || v === null || v === '') ? diasUteisMes : (Number(v)||0);
+}
+
+function calcularFechamento(){
+  const porNome = {};
+  for (const o of ocorrencias){
+    const n = o.nome.trim();
+    if (!porNome[n]) porNome[n] = [];
+    porNome[n].push(o);
+  }
+
+  return cadastro.map(c => {
+    const ocs = porNome[c.nome.trim()] || [];
+    const diasUteis = diasUteisDaEmpresa(c.empresa);
+    let descVA = 0, descVT = 0;
+    for (const o of ocs){
+      // férias sempre desconta só os dias úteis do período (não os dias corridos),
+      // recalculado aqui direto da data/fim pra corrigir até lançamentos antigos
+      let dias = (ehFerias(o.motivo) && o.data && o.dataFim)
+        ? (diasUteisEntreDatas(o.data, o.dataFim) || Number(o.dias) || 1)
+        : (Number(o.dias) || 1);
+      const cat = buscarMotivo(o.motivo);
+      if (cat?.descontaVA) descVA += dias;
+      if (cat?.descontaVT) descVT += dias;
+    }
+    const diasExtra = ocs.reduce((s,o)=> s + (Number(o.diasVaVt)||0), 0);
+    const dobras = ocs.reduce((s,o)=> s + (Number(o.dobrasVa)||0), 0);
+    const diasLanche = ocs.reduce((s,o)=> s + (o.lanche ? 1 : 0), 0);
+    const totalDiasVA = diasUteis - descVA + diasExtra + dobras;
+    const totalDiasVT = diasUteis - descVT + diasExtra - diasLanche;
+    const valorVA = totalDiasVA * (c.va||0);
+    const valorVT = totalDiasVT * (c.vt||0);
+    const horasSabado = ocs.reduce((s,o)=> s + (Number(o.horasSabado)||0), 0);
+    const horasDomingo = ocs.reduce((s,o)=> s + (Number(o.horasDomingo)||0), 0);
+    const horasNoturnas = ocs.reduce((s,o)=> s + (Number(o.adicionalNoturno)||0), 0);
+    return {
+      nome: c.nome, funcao: c.funcao, empresa: c.empresa, va: c.va, vt: c.vt,
+      diasUteis, descVA, descVT, diasExtra, dobras, diasLanche,
+      totalDiasVA, totalDiasVT, valorVA, valorVT,
+      horasSabado, horasDomingo, horasNoturnas,
+      total: valorVA + valorVT,
+    };
+  });
+}
+
+function faltasPendentesRevisao(){
+  return ocorrencias.filter(o => nomeCanonico(o.motivo).toUpperCase().startsWith('FALTA') && o.revisado===false);
+}
+
+// ---------------------------------------------------------------
+// Render: DASHBOARD
+// ---------------------------------------------------------------
+function renderDashboard(){
+  const fechamento = calcularFechamento();
+  const totalColab = cadastro.length;
+  const totalVA = fechamento.reduce((s,f)=>s+f.valorVA,0);
+  const totalVT = fechamento.reduce((s,f)=>s+f.valorVT,0);
+  const totalGeral = totalVA + totalVT;
+  const totalOcorr = ocorrencias.length;
+
+  const pendentes = faltasPendentesRevisao();
+  const alerta = document.getElementById('alertaFaltas');
+  if (pendentes.length > 0){
+    alerta.style.display = 'block';
+    alerta.innerHTML = `
+      <div class="alert-banner">
+        <span class="alert-icon">⚠</span>
+        <div>
+          <strong>${pendentes.length} falta${pendentes.length>1?'s':''} importada${pendentes.length>1?'s':''} do ponto aguardando revisão.</strong>
+          Confira se cada uma deve mesmo descontar VA/VT antes de fechar a folha de ${labelMes(mesAtivo)}.
+        </div>
+        <button class="btn" id="btnVerPendentes">Ver ocorrências</button>
+      </div>`;
+    document.getElementById('btnVerPendentes').addEventListener('click', () => {
+      ativarTab('ocorrencias');
+      document.getElementById('ocSoNaoRevisadas').checked = true;
+      renderOcorrencias();
+    });
+  } else {
+    alerta.style.display = 'none';
+    alerta.innerHTML = '';
+  }
+
+  const kpis = [
+    {label:'Colaboradores', value: totalColab, accent:'var(--amber)'},
+    {label:'Total VA', value: fmtBRL(totalVA), accent:'var(--cyan)'},
+    {label:'Total VT', value: fmtBRL(totalVT), accent:'var(--green)'},
+    {label:'Total geral (VA+VT)', value: fmtBRL(totalGeral), accent:'var(--magenta)'},
+    {label:'Ocorrências no mês', value: totalOcorr, accent:'var(--amber)'},
+  ];
+  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
+    <div class="kpi" style="--accent:${k.accent}">
+      <div class="label">${k.label}</div>
+      <div class="value">${k.value}</div>
+    </div>`).join('');
+
+  const porEmpresa = {};
+  fechamento.forEach(f => { porEmpresa[f.empresa] = (porEmpresa[f.empresa]||0) + f.total; });
+  const maxEmpresa = Math.max(...Object.values(porEmpresa), 1);
+  document.getElementById('barEmpresa').innerHTML = Object.entries(porEmpresa)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([nome,val]) => `
+      <div class="bar-row">
+        <div class="bar-label">${nome}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxEmpresa*100).toFixed(1)}%; background:${corEmpresa(nome)}"></div></div>
+        <div class="bar-val">${fmtBRL(val)}</div>
+      </div>`).join('') || '<div class="empty-state">Sem dados</div>';
+
+  const porFuncao = {};
+  cadastro.forEach(c => { porFuncao[c.funcao||'—'] = (porFuncao[c.funcao||'—']||0) + 1; });
+  const maxFuncao = Math.max(...Object.values(porFuncao), 1);
+  document.getElementById('barFuncao').innerHTML = Object.entries(porFuncao)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([nome,val]) => `
+      <div class="bar-row">
+        <div class="bar-label">${nome}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxFuncao*100).toFixed(1)}%; background:var(--amber)"></div></div>
+        <div class="bar-val">${val} pessoa${val>1?'s':''}</div>
+      </div>`).join('') || '<div class="empty-state">Sem dados</div>';
+
+  const porMotivo = {};
+  ocorrencias.forEach(o => { const m=nomeCanonico(o.motivo)||'—'; porMotivo[m]=(porMotivo[m]||0)+1; });
+  const maxMotivo = Math.max(...Object.values(porMotivo), 1);
+  document.getElementById('barMotivo').innerHTML = Object.entries(porMotivo)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([nome,val]) => `
+      <div class="bar-row">
+        <div class="bar-label">${nome}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxMotivo*100).toFixed(1)}%; background:var(--cyan)"></div></div>
+        <div class="bar-val">${val} ocorr.</div>
+      </div>`).join('') || '<div class="empty-state">Sem ocorrências</div>';
+
+  document.getElementById('periodoLabel').textContent = `${labelMes(mesAtivo).toUpperCase()} · ${totalColab} COLABORADORES · ${totalOcorr} OCORRÊNCIAS`;
+}
+
+// ---------------------------------------------------------------
+// Render: CADASTRO
+// ---------------------------------------------------------------
+function popularFiltrosCadastro(){
+  const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const funcoes = [...new Set(cadastro.map(c=>c.funcao))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const selE = document.getElementById('cadFiltroEmpresa');
+  const selF = document.getElementById('cadFiltroFuncao');
+  const curE = selE.value, curF = selF.value;
+  selE.innerHTML = '<option value="">Todas empresas</option>' + empresas.map(e=>`<option value="${e}">${e}</option>`).join('');
+  selF.innerHTML = '<option value="">Todas funções</option>' + funcoes.map(f=>`<option value="${f}">${f}</option>`).join('');
+  selE.value = curE; selF.value = curF;
+
+  const selE2 = document.getElementById('feFiltroEmpresa');
+  const curE2 = selE2.value;
+  selE2.innerHTML = '<option value="">Todas empresas</option>' + empresas.map(e=>`<option value="${e}">${e}</option>`).join('');
+  selE2.value = curE2;
+}
+
+const FUNCOES_PADRAO = ['ADM','COMERCIAL','CONTROLE','ESTOQUE','EXTERNA','LABORATORIO'];
+
+function opcoesFuncao(atual){
+  const lista = [...new Set([...FUNCOES_PADRAO, atual].filter(Boolean))];
+  return lista.map(f => `<option value="${escAttr(f)}" ${f===atual?'selected':''}>${escAttr(f)}</option>`).join('');
+}
+
+function renderCadastro(){
+  popularFiltrosCadastro();
+  const busca = document.getElementById('cadBusca').value.trim().toUpperCase();
+  const fEmp = document.getElementById('cadFiltroEmpresa').value;
+  const fFun = document.getElementById('cadFiltroFuncao').value;
+
+  const linhas = cadastro
+    .map((c,i)=>({...c, _i:i}))
+    .filter(c => (!busca || c.nome.toUpperCase().includes(busca)) && (!fEmp || c.empresa===fEmp) && (!fFun || c.funcao===fFun))
+    .sort((a,b)=> a.nome.localeCompare(b.nome, 'pt-BR', {sensitivity:'base'}));
+
+  const tbody = document.querySelector('#tblCadastro tbody');
+  if (linhas.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum colaborador encontrado com esse filtro em ${labelMes(mesAtivo)}.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = linhas.map(c => {
+    const travado = c.travado === true;
+    const dis = travado ? 'disabled' : '';
+    return `
+    <tr data-idx="${c._i}">
+      <td><input data-f="nome" value="${escAttr(c.nome)}" ${dis}></td>
+      <td><input data-f="empresa" value="${escAttr(c.empresa)}" style="color:${corEmpresa(c.empresa)}" ${dis}></td>
+      <td><select data-f="funcao" ${dis}>${opcoesFuncao(c.funcao)}</select></td>
+      <td><input class="num-in" data-f="va" type="number" step="0.01" value="${Number(c.va).toFixed(2)}" ${dis}></td>
+      <td><input class="num-in" data-f="vt" type="number" step="0.01" value="${Number(c.vt).toFixed(2)}" ${dis}></td>
+      <td class="row-actions">
+        <button data-lock="${c._i}" title="${travado ? 'Destravar para editar' : 'Travar edição'}" style="${travado?'':'color:var(--amber);'}">${travado ? '🔒' : '✏️'}</button>
+        <button data-del="${c._i}" title="Remover" ${travado?'disabled':''}>✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('input, select').forEach(inp => {
+    const evt = inp.tagName === 'SELECT' ? 'change' : 'input';
+    inp.addEventListener(evt, e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      const field = e.target.dataset.f;
+      let val = e.target.value;
+      if (field === 'va' || field === 'vt') val = parseFloat(val) || 0;
+      cadastro[idx][field] = val;
+      autoSave('cadSaveInd');
+      renderDashboard();
+      renderFechamento();
+    });
+    inp.addEventListener('blur', e => {
+      const field = e.target.dataset.f;
+      if (field === 'va' || field === 'vt'){
+        e.target.value = Number(parseFloat(e.target.value) || 0).toFixed(2);
+      }
+    });
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      cadastro[idx].travado = !(cadastro[idx].travado === true);
+      autoSave('cadSaveInd');
+      renderCadastro();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      const nome = cadastro[idx].nome;
+      if (!confirm(`Remover "${nome}" do cadastro de ${labelMes(mesAtivo)}?`)) return;
+      cadastro.splice(idx,1);
+      autoSave('cadSaveInd');
+      renderCadastro(); renderDashboard(); renderFechamento();
+    });
+  });
+}
+
+function exportarCadastroXlsx(){
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([...cadastro].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})).map(c=>({
+    NOME:c.nome, EMPRESA:c.empresa, FUNCAO:c.funcao,
+    'VA DIARIO': Number(Number(c.va).toFixed(2)), 'VT DIARIO': Number(Number(c.vt).toFixed(2)),
+  })));
+  XLSX.utils.book_append_sheet(wb, ws, 'CADASTRO');
+  XLSX.writeFile(wb, `cadastro_${mesAtivo}.xlsx`);
+}
+
+function exportarCadastroPdf(){
+  if (!window.jspdf){ alert('Biblioteca de PDF ainda esta carregando, tente novamente em instantes.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'pt' });
+  doc.setFontSize(13);
+  doc.text(`Cadastro · ${labelMes(mesAtivo)}`, 30, 30);
+  const head = [['Nome','Empresa','Funcao','VA diario','VT diario']];
+  const body = [...cadastro].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})).map(c => [c.nome, c.empresa, c.funcao, fmtBRL(Number(c.va)), fmtBRL(Number(c.vt))]);
+  doc.autoTable({ head, body, startY: 42, styles:{ fontSize:8 }, headStyles:{ fillColor:[33,38,46] } });
+  doc.save(`cadastro_${mesAtivo}.pdf`);
+}
+
+function escAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
+
+// ---------------------------------------------------------------
+// Render: OCORRENCIAS
+// ---------------------------------------------------------------
+function popularFiltrosOcorrencias(){
+  const motivos = [...new Set(ocorrencias.map(o=>nomeCanonico(o.motivo)))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const sel = document.getElementById('ocFiltroMotivo');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">Todos motivos</option>' + motivos.map(m=>`<option value="${m}">${m}</option>`).join('');
+  sel.value = cur;
+}
+
+function renderOcorrencias(){
+  popularFiltrosOcorrencias();
+  const busca = document.getElementById('ocBusca').value.trim().toUpperCase();
+  const fMot = document.getElementById('ocFiltroMotivo').value;
+  const fData = document.getElementById('ocFiltroData').value;
+  const soNaoRevisadas = document.getElementById('ocSoNaoRevisadas').checked;
+
+  // Mapa de duplicidade: mesma pessoa + mesma data + mesmo motivo, em TODAS as ocorrências do mês
+  // (independe do filtro atual em tela, pra sempre pegar duplicidade real).
+  const contagemDup = {};
+  ocorrencias.forEach(o => {
+    const nome = (o.nome||'').trim().toUpperCase();
+    const data = o.data||'';
+    const motivo = nomeCanonico(o.motivo).toUpperCase();
+    if (!nome || !data || !motivo) return; // linha em branco/incompleta não conta
+    const chave = `${nome}|${data}|${motivo}`;
+    contagemDup[chave] = (contagemDup[chave]||0) + 1;
+  });
+
+  // KPIs do mês inteiro (independem do filtro em tela)
+  const faltasPendentes = ocorrencias.filter(o => nomeCanonico(o.motivo).toUpperCase().startsWith('FALTA') && o.revisado===false).length;
+  const gruposDuplicados = Object.values(contagemDup).filter(v=>v>1).length;
+  const horasTotais = ocorrencias.reduce((s,o)=> s + (Number(o.horasSabado)||0) + (Number(o.horasDomingo)||0) + (Number(o.adicionalNoturno)||0), 0);
+  document.getElementById('ocKpiGrid').innerHTML = `
+    <div class="kpi"><div class="label">Ocorrências em ${labelMes(mesAtivo)}</div><div class="value">${ocorrencias.length}</div></div>
+    <div class="kpi"><div class="label">Faltas pendentes de revisão</div><div class="value" style="color:${faltasPendentes?'var(--magenta)':'inherit'}">${faltasPendentes}</div></div>
+    <div class="kpi"><div class="label">Possíveis duplicidades</div><div class="value" style="color:${gruposDuplicados?'var(--amber)':'inherit'}">${gruposDuplicados}</div></div>
+    <div class="kpi"><div class="label">Horas lançadas <small>(sáb+dom+not.)</small></div><div class="value">${decParaHora(horasTotais)}</div></div>
+  `;
+
+  const linhas = ocorrencias
+    .map((o,i)=>({...o,_i:i}))
+    .filter(o => (!busca || (o.nome||'').toUpperCase().includes(busca)) && (!fMot || nomeCanonico(o.motivo)===fMot) && (!fData || o.data===fData))
+    .filter(o => !soNaoRevisadas || o.revisado===false)
+    .sort((a,b) => {
+      const campo = ocOrdenacao.campo;
+      let va, vb;
+      if (campo === 'nome'){ va = (a.nome||'').toUpperCase(); vb = (b.nome||'').toUpperCase(); }
+      else if (campo === 'motivo'){ va = nomeCanonico(a.motivo).toUpperCase(); vb = nomeCanonico(b.motivo).toUpperCase(); }
+      else { va = a.data||''; vb = b.data||''; }
+      const cmp = va.localeCompare(vb, 'pt-BR', {sensitivity:'base'});
+      return ocOrdenacao.dir === 'asc' ? cmp : -cmp;
+    });
+
+  // atualiza indicador visual (seta) de qual coluna está ordenando
+  document.querySelectorAll('#tblOcorrencias th.sortable').forEach(th => {
+    const ativo = th.dataset.sort === ocOrdenacao.campo;
+    th.classList.toggle('active', ativo);
+    const seta = th.querySelector('.arrow');
+    if (seta) seta.textContent = ativo ? (ocOrdenacao.dir === 'asc' ? '▴' : '▾') : '▾';
+  });
+
+  // seleção múltipla: sincroniza checkbox "selecionar todos" e a barra de ações em massa
+  const selTodos = document.getElementById('ocSelecionarTodos');
+  if (selTodos){
+    const todosVisiveisSelecionados = linhas.length > 0 && linhas.every(o => ocSelecionados.has(o._i));
+    selTodos.checked = todosVisiveisSelecionados;
+    selTodos.indeterminate = !todosVisiveisSelecionados && linhas.some(o => ocSelecionados.has(o._i));
+  }
+  atualizarBarraSelecaoOcorrencias();
+
+  const tbody = document.querySelector('#tblOcorrencias tbody');
+  if (linhas.length === 0){
+    tbody.innerHTML = `<tr><td colspan="14"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma ocorrência lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
+    return;
+  }
+  const nomesCadastro = cadastro.map(c=>c.nome);
+  const opcoesMotivo = [...catalogoMotivos.map(c=>c.motivoFolha), 'TRABALHO FDS'];
+  const opcoesUnicas = [...new Set(opcoesMotivo)].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+
+  tbody.innerHTML = linhas.map(o => {
+    const canon = nomeCanonico(o.motivo).toUpperCase();
+    const pendente = canon.startsWith('FALTA') && o.revisado === false;
+    const ferias = ehFerias(o.motivo);
+    const bloqueado = o.revisado === true;
+    const dis = bloqueado ? 'disabled' : '';
+    const chaveDup = `${(o.nome||'').trim().toUpperCase()}|${o.data||''}|${canon}`;
+    const duplicada = (o.nome||'').trim() && o.data && canon && (contagemDup[chaveDup]||0) > 1;
+    const lancheInconsistente = (Number(o.adicionalNoturno)||0) > 0 && !o.lanche;
+    const classes = [pendente ? 'row-pendente' : '', duplicada ? 'row-duplicada' : '', ocSelecionados.has(o._i) ? 'row-selecionada' : ''].filter(Boolean).join(' ');
+    return `
+    <tr data-idx="${o._i}" class="${classes}">
+      <td style="text-align:center"><input type="checkbox" class="oc-select" data-idx="${o._i}" ${ocSelecionados.has(o._i)?'checked':''}></td>
+      <td>
+        <input data-f="data" type="date" value="${o.data||''}" ${dis}>
+        ${duplicada ? `<span class="warn-dot" title="Já existe outro lançamento igual (mesmo colaborador, data e motivo) — confira se não é duplicado">⚠</span>` : ''}
+      </td>
+      <td><input data-f="dataFim" type="date" value="${o.dataFim||''}" title="Fim das férias (usado só quando o motivo é férias)" ${ferias&&!bloqueado?'':'disabled'} style="${ferias?'':'opacity:.35'}"></td>
+      <td><input data-f="nome" list="dl-nomes" value="${escAttr(o.nome)}" placeholder="Nome…" ${dis}></td>
+      <td>
+        <select data-f="motivo" ${dis}>
+          <option value="" ${!o.motivo?'selected':''}>— selecione —</option>
+          ${opcoesUnicas.map(m=>`<option value="${m}" ${nomeCanonico(o.motivo)===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+      </td>
+      <td><input class="num-in" data-f="dias" type="number" step="1" min="1" value="${o.dias||1}" style="width:52px" ${(ferias&&o.dataFim)?'readonly title="Calculado automático (dias úteis entre início e fim)"':''} ${dis}></td>
+      <td><input class="num-in" data-f="horasSabado" type="text" inputmode="numeric" placeholder="00:00" pattern="-?\\d{1,3}:[0-5]\\d" value="${decParaHora(o.horasSabado)}" style="width:64px" ${dis}></td>
+      <td><input class="num-in" data-f="horasDomingo" type="text" inputmode="numeric" placeholder="00:00" pattern="-?\\d{1,3}:[0-5]\\d" value="${decParaHora(o.horasDomingo)}" style="width:64px" ${dis}></td>
+      <td><input class="num-in" data-f="adicionalNoturno" type="text" inputmode="numeric" placeholder="00:00" pattern="-?\\d{1,3}:[0-5]\\d" value="${decParaHora(o.adicionalNoturno)}" style="width:64px" ${dis}></td>
+      <td style="text-align:center">
+        <input data-f="lanche" type="checkbox" style="width:auto" title="Dia de lanche — não recebe vale transporte" ${o.lanche?'checked':''} ${dis}>
+        ${lancheInconsistente ? `<span class="warn-dot" title="Tem Adicional Noturno lançado mas o Lanche não está marcado — confira se não deveria ser marcado (não vai descontar VT desse dia se ficar assim)">⚠</span>` : ''}
+      </td>
+      <td><input class="num-in" data-f="diasVaVt" type="number" step="1" value="${o.diasVaVt||0}" ${dis}></td>
+      <td><input class="num-in" data-f="dobrasVa" type="number" step="1" value="${o.dobrasVa||0}" ${dis}></td>
+      <td style="text-align:center">
+        <button class="btn ghost" data-lock="${o._i}" title="${bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição'}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}">${bloqueado ? '🔒' : '🔓'}</button>
+      </td>
+      <td class="row-actions"><button data-del="${o._i}" title="Remover" ${dis}>✕</button></td>
+    </tr>`;
+  }).join('');
+
+  if (!document.getElementById('dl-nomes')){
+    const dl = document.createElement('datalist');
+    dl.id = 'dl-nomes';
+    document.body.appendChild(dl);
+  }
+  document.getElementById('dl-nomes').innerHTML = nomesCadastro.map(n=>`<option value="${escAttr(n)}">`).join('');
+
+  tbody.querySelectorAll('input,select').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      const field = e.target.dataset.f;
+      const o = ocorrencias[idx];
+      if (o.revisado === true) return; // travado — não edita
+
+      let val = e.target.value;
+      if (['horasSabado','horasDomingo','adicionalNoturno'].includes(field)){
+        val = horaParaDec(val);
+      } else if (['diasVaVt','dobrasVa','dias'].includes(field)){
+        val = parseFloat(val)||0;
+      } else if (field === 'lanche'){
+        val = e.target.checked;
+      }
+      o[field] = val;
+
+      // sábado/domingo com hora lançada já soma 1 dia em "Dias VA/VT"
+      if (field === 'horasSabado' || field === 'horasDomingo'){
+        if ((Number(o.horasSabado)||0) > 0 || (Number(o.horasDomingo)||0) > 0){
+          if ((Number(o.diasVaVt)||0) < 1) o.diasVaVt = 1;
+        }
+      }
+      // adicional noturno com hora lançada já soma 1 dia em "Dobras VA"
+      // e automaticamente marca "Lanche" (dia de lanche, sem vale transporte)
+      if (field === 'adicionalNoturno'){
+        if ((Number(o.adicionalNoturno)||0) > 0){
+          if ((Number(o.dobrasVa)||0) < 1) o.dobrasVa = 1;
+          o.lanche = true;
+        }
+      }
+      // férias: dias = dias úteis entre início e fim
+      if (field === 'data' || field === 'dataFim' || field === 'motivo'){
+        if (ehFerias(o.motivo) && o.data && o.dataFim){
+          const calc = diasUteisEntreDatas(o.data, o.dataFim);
+          if (calc !== null) o.dias = calc;
+        }
+      }
+      // motivo "HORA EXTRA FIM DE SEMANA" já soma 1 dia em "Dias VA/VT"
+      if (field === 'motivo'){
+        if (nomeCanonico(o.motivo).toUpperCase() === 'HORA EXTRA FIM DE SEMANA'){
+          if ((Number(o.diasVaVt)||0) < 1) o.diasVaVt = 1;
+        }
+      }
+
+      autoSave('ocSaveInd');
+      renderDashboard(); renderFechamento();
+      if (['revisado','motivo','horasSabado','horasDomingo','adicionalNoturno','lanche','data','dataFim'].includes(field)) renderOcorrencias();
+    });
+  });
+  // Nome: recalcula duplicidade só quando sai do campo (blur), pra não perder o foco a cada letra digitada
+  tbody.querySelectorAll('input[data-f="nome"]').forEach(inp => {
+    inp.addEventListener('blur', () => renderOcorrencias());
+  });
+  tbody.querySelectorAll('.oc-select').forEach(chk => {
+    chk.addEventListener('change', e => {
+      const idx = Number(e.target.dataset.idx);
+      if (e.target.checked) ocSelecionados.add(idx); else ocSelecionados.delete(idx);
+      e.target.closest('tr').classList.toggle('row-selecionada', e.target.checked);
+      atualizarBarraSelecaoOcorrencias();
+    });
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      const o = ocorrencias[idx];
+      if (o.revisado === true){
+        if (!confirm('Essa ocorrência está conferida e travada. Destravar para editar?')) return;
+        o.revisado = false;
+      } else {
+        o.revisado = true;
+      }
+      autoSave('ocSaveInd');
+      renderOcorrencias(); renderDashboard(); renderFechamento();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      if (ocorrencias[idx].revisado === true){ alert('Essa ocorrência está conferida e travada. Destrave antes de remover.'); return; }
+      ocorrencias.splice(idx,1);
+      ocSelecionados.clear(); // índices mudam ao remover — mais seguro limpar a seleção
+      autoSave('ocSaveInd');
+      renderOcorrencias(); renderDashboard(); renderFechamento();
+    });
+  });
+}
+
+function atualizarBarraSelecaoOcorrencias(){
+  const bar = document.getElementById('ocBulkBar');
+  if (!bar) return;
+  const count = ocSelecionados.size;
+  bar.style.display = count > 0 ? 'flex' : 'none';
+  const label = document.getElementById('ocBulkCount');
+  if (label) label.textContent = `${count} selecionado(s)`;
+}
+
+function exportarOcorrenciasCsv(){
+  const header = ['Data','Fim (férias)','Nome','Motivo','Dias','H. Sábado (50%)','H. Domingo (100%)','Ad. Noturno','Lanche','Dias VA/VT','Dobras VA','Conferido'];
+  const linhas = [...ocorrencias].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(o => [
+    o.data||'', o.dataFim||'', o.nome||'', nomeCanonico(o.motivo), o.dias||1,
+    decParaHora(o.horasSabado), decParaHora(o.horasDomingo), decParaHora(o.adicionalNoturno),
+    o.lanche?'S':'N', o.diasVaVt||0, o.dobrasVa||0, o.revisado?'S':'N',
+  ]);
+  const csv = [header, ...linhas].map(l => l.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  baixar(blob, `ocorrencias_${mesAtivo}.csv`);
+}
+
+function exportarOcorrenciasXlsx(){
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([...ocorrencias].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(o=>({
+    DATA:o.data||'', 'FIM (FÉRIAS)':o.dataFim||'', NOME:o.nome||'', MOTIVO:nomeCanonico(o.motivo), DIAS:o.dias||1,
+    'HORAS SABADO (50%)':decParaHora(o.horasSabado), 'HORAS DOMINGO (100%)':decParaHora(o.horasDomingo),
+    'ADICIONAL NOTURNO':decParaHora(o.adicionalNoturno), LANCHE:o.lanche?'S':'N',
+    'DIAS DE VA E VT':o.diasVaVt||0, 'DOBRAS VA':o.dobrasVa||0, CONFERIDO:o.revisado?'S':'N',
+  })));
+  XLSX.utils.book_append_sheet(wb, ws, 'OCORRENCIAS');
+  XLSX.writeFile(wb, `ocorrencias_${mesAtivo}.xlsx`);
+}
+
+function exportarOcorrenciasPdf(){
+  if (!window.jspdf){ alert('Biblioteca de PDF ainda está carregando, tente novamente em instantes.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'pt' });
+  doc.setFontSize(13);
+  doc.text(`Ocorrências · ${labelMes(mesAtivo)}`, 30, 30);
+  const head = [['Data','Fim (férias)','Nome','Motivo','Dias','H. Sáb. (50%)','H. Dom. (100%)','Ad. Not.','Lanche','Dias VA/VT','Dobras VA','Conferido']];
+  const body = [...ocorrencias].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(o => [
+    o.data||'', o.dataFim||'', o.nome||'', nomeCanonico(o.motivo), o.dias||1,
+    decParaHora(o.horasSabado), decParaHora(o.horasDomingo), decParaHora(o.adicionalNoturno),
+    o.lanche?'Sim':'Não', o.diasVaVt||0, o.dobrasVa||0, o.revisado?'Sim':'Não',
+  ]);
+  doc.autoTable({ head, body, startY: 42, styles:{ fontSize:7 }, headStyles:{ fillColor:[33,38,46] } });
+  doc.save(`ocorrencias_${mesAtivo}.pdf`);
+}
+
+// ---------------------------------------------------------------
+// Render: MOTIVOS
+// ---------------------------------------------------------------
+function renderMotivos(){
+  const busca = document.getElementById('moBusca').value.trim().toUpperCase();
+
+  const totalMotivos = catalogoMotivos.length;
+  const qtdVA = catalogoMotivos.filter(m=>m.descontaVA).length;
+  const qtdVT = catalogoMotivos.filter(m=>m.descontaVT).length;
+  const qtdNeutro = catalogoMotivos.filter(m=>!m.descontaVA && !m.descontaVT).length;
+  document.getElementById('moKpiGrid').innerHTML = `
+    <div class="kpi"><div class="label">Motivos cadastrados</div><div class="value">${totalMotivos}</div></div>
+    <div class="kpi"><div class="label">Descontam VA</div><div class="value" style="color:var(--amber)">${qtdVA}</div></div>
+    <div class="kpi"><div class="label">Descontam VT</div><div class="value" style="color:var(--amber)">${qtdVT}</div></div>
+    <div class="kpi"><div class="label">Neutros <small>(não descontam)</small></div><div class="value" style="color:var(--green)">${qtdNeutro}</div></div>
+  `;
+
+  const linhas = catalogoMotivos
+    .map((m,i)=>({...m,_i:i}))
+    .filter(m => !busca || m.motivo.toUpperCase().includes(busca) || m.motivoFolha.toUpperCase().includes(busca))
+    .sort((a,b)=> a.motivo.localeCompare(b.motivo, 'pt-BR', {sensitivity:'base'}));
+
+  const tbody = document.querySelector('#tblMotivos tbody');
+  if (linhas.length === 0){
+    tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum motivo encontrado.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = linhas.map(m => {
+    const travado = m.travado === true;
+    const dis = travado ? 'disabled' : '';
+    return `
+    <tr data-idx="${m._i}">
+      <td><input data-f="motivo" value="${escAttr(m.motivo)}" ${dis}></td>
+      <td><input data-f="motivoFolha" value="${escAttr(m.motivoFolha)}" ${dis}></td>
+      <td style="text-align:center"><input data-f="descontaVA" type="checkbox" style="width:auto" ${m.descontaVA?'checked':''} ${dis}></td>
+      <td style="text-align:center"><input data-f="descontaVT" type="checkbox" style="width:auto" ${m.descontaVT?'checked':''} ${dis}></td>
+      <td class="row-actions">
+        <button data-lock="${m._i}" title="${travado ? 'Destravar para editar' : 'Travar edição'}" style="${travado?'':'color:var(--amber);'}">${travado ? '🔒' : '✏️'}</button>
+        <button data-del="${m._i}" title="Remover" ${travado?'disabled':''}>✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('input[data-f]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      const field = e.target.dataset.f;
+      const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+      catalogoMotivos[idx][field] = val;
+      autoSaveMotivos();
+      renderDashboard(); renderFechamento();
+    });
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      catalogoMotivos[idx].travado = !(catalogoMotivos[idx].travado === true);
+      autoSaveMotivos();
+      renderMotivos();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      const nome = catalogoMotivos[idx].motivo;
+      if (!confirm(`Remover o motivo "${nome}" do catálogo? Isso vale para todos os meses.`)) return;
+      catalogoMotivos.splice(idx,1);
+      autoSaveMotivos();
+      renderMotivos(); renderDashboard(); renderFechamento();
+    });
+  });
+}
+
+function addMotivo(){
+  catalogoMotivos.push({motivo:'NOVO MOTIVO', motivoFolha:'NOVO MOTIVO', abona:false, impedePonto:false, descontaVA:false, descontaVT:false, travado:false});
+  autoSaveMotivos();
+  renderMotivos();
+  const rows = document.querySelectorAll('#tblMotivos tbody tr');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="motivo"]');
+  last?.focus(); last?.select();
+}
+
+// ---------------------------------------------------------------
+// Render: ANOTAÇÕES FINANCEIRAS
+// (registro avulso de desconto/pagamento — não entra no cálculo do Fechamento)
+// ---------------------------------------------------------------
+const nomeCanonicoTipoFinanceiro = t => String(t??'').trim().toUpperCase();
+
+function naturezaDoTipo(tipo){
+  const t = catalogoTiposFinanceiros.find(x => nomeCanonicoTipoFinanceiro(x.tipo) === nomeCanonicoTipoFinanceiro(tipo));
+  return t ? t.natureza : 'desconto';
+}
+
+function renderTiposFinanceiros(){
+  const tbody = document.querySelector('#tblTiposFinanceiros tbody');
+  const ordenados = catalogoTiposFinanceiros
+    .map((t,i)=>({...t,_i:i}))
+    .sort((a,b)=> a.tipo.localeCompare(b.tipo,'pt-BR',{sensitivity:'base'}));
+
+  if (ordenados.length === 0){
+    tbody.innerHTML = `<tr><td colspan="3"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum tipo cadastrado.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = ordenados.map(t => {
+    const travado = t.travado === true;
+    const dis = travado ? 'disabled' : '';
+    return `
+    <tr data-idx="${t._i}">
+      <td><input data-f="tipo" value="${escAttr(t.tipo)}" ${dis}></td>
+      <td>
+        <select data-f="natureza" ${dis}>
+          <option value="desconto" ${t.natureza==='desconto'?'selected':''}>Desconto</option>
+          <option value="pagamento" ${t.natureza==='pagamento'?'selected':''}>Pagamento</option>
+        </select>
+      </td>
+      <td class="row-actions">
+        <button data-lock="${t._i}" title="${travado ? 'Destravar para editar' : 'Travar edição'}" style="${travado?'':'color:var(--amber);'}">${travado ? '🔒' : '✏️'}</button>
+        <button data-del="${t._i}" title="Remover" ${dis}>✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('select[data-f="natureza"]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      catalogoTiposFinanceiros[idx].natureza = e.target.value;
+      autoSaveCatalogoFinanceiro();
+      renderAnotacoes();
+    });
+  });
+  // Nome do tipo: só atualiza a lista (dropdowns/badges) quando sai do campo,
+  // pra não reconstruir a tabela e perder o foco a cada letra digitada
+  tbody.querySelectorAll('input[data-f="tipo"]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      catalogoTiposFinanceiros[idx].tipo = e.target.value;
+      autoSaveCatalogoFinanceiro();
+    });
+    inp.addEventListener('blur', () => renderAnotacoes());
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      catalogoTiposFinanceiros[idx].travado = !(catalogoTiposFinanceiros[idx].travado === true);
+      autoSaveCatalogoFinanceiro();
+      renderTiposFinanceiros();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      const nome = catalogoTiposFinanceiros[idx].tipo;
+      if (!confirm(`Remover o tipo "${nome}"? Isso vale para todos os meses.`)) return;
+      catalogoTiposFinanceiros.splice(idx,1);
+      autoSaveCatalogoFinanceiro();
+      renderTiposFinanceiros(); renderAnotacoes();
+    });
+  });
+}
+
+function addTipoFinanceiro(){
+  catalogoTiposFinanceiros.push({tipo:'NOVO TIPO', natureza:'desconto', travado:false});
+  autoSaveCatalogoFinanceiro();
+  renderTiposFinanceiros();
+  const rows = document.querySelectorAll('#tblTiposFinanceiros tbody tr');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="tipo"]');
+  last?.focus(); last?.select();
+}
+
+function popularFiltroTipoFinanceiro(){
+  const sel = document.getElementById('anFiltroTipo');
+  const cur = sel.value;
+  const tipos = [...catalogoTiposFinanceiros.map(t=>t.tipo)].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  sel.innerHTML = '<option value="">Todos os tipos</option>' + tipos.map(t=>`<option value="${escAttr(t)}">${t}</option>`).join('');
+  sel.value = cur;
+}
+
+function renderAnotacoes(){
+  renderTiposFinanceiros();
+  popularFiltroTipoFinanceiro();
+
+  const busca = document.getElementById('anBusca').value.trim().toUpperCase();
+  const fTipo = document.getElementById('anFiltroTipo').value;
+  const fNatureza = document.getElementById('anFiltroNatureza').value;
+  const fData = document.getElementById('anFiltroData').value;
+  const soNaoConferidos = document.getElementById('anSoNaoConferidos').checked;
+
+  // KPIs do mês inteiro (independem do filtro em tela) — só informativo, não afeta o Fechamento
+  const totalDesconto = lancamentosFinanceiros.filter(l=>naturezaDoTipo(l.tipo)==='desconto').reduce((s,l)=>s+(Number(l.valor)||0),0);
+  const totalPagamento = lancamentosFinanceiros.filter(l=>naturezaDoTipo(l.tipo)==='pagamento').reduce((s,l)=>s+(Number(l.valor)||0),0);
+  const pendentes = lancamentosFinanceiros.filter(l=>l.revisado===false).length;
+  document.getElementById('anKpiGrid').innerHTML = `
+    <div class="kpi"><div class="label">Total anotado — Desconto</div><div class="value" style="color:var(--magenta)">${fmtBRL(totalDesconto)}</div></div>
+    <div class="kpi"><div class="label">Total anotado — Pagamento</div><div class="value" style="color:var(--green)">${fmtBRL(totalPagamento)}</div></div>
+    <div class="kpi"><div class="label">Lançamentos em ${labelMes(mesAtivo)}</div><div class="value">${lancamentosFinanceiros.length}</div></div>
+    <div class="kpi"><div class="label">Pendentes de conferência</div><div class="value" style="color:${pendentes?'var(--amber)':'inherit'}">${pendentes}</div></div>
+  `;
+
+  const linhas = lancamentosFinanceiros
+    .map((l,i)=>({...l,_i:i}))
+    .filter(l => !busca || (l.nome||'').toUpperCase().includes(busca))
+    .filter(l => !fTipo || nomeCanonicoTipoFinanceiro(l.tipo)===nomeCanonicoTipoFinanceiro(fTipo))
+    .filter(l => !fNatureza || naturezaDoTipo(l.tipo)===fNatureza)
+    .filter(l => !fData || l.data===fData)
+    .filter(l => !soNaoConferidos || l.revisado===false)
+    .sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', 'pt-BR', {sensitivity:'base'}));
+
+  const tbody = document.querySelector('#tblAnotacoes tbody');
+  if (linhas.length === 0){
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma anotação lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
+    document.querySelector('#tblAnotacoes tfoot').innerHTML = '';
+    return;
+  }
+
+  const tiposUnicos = [...new Set(catalogoTiposFinanceiros.map(t=>t.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+
+  tbody.innerHTML = linhas.map(l => {
+    const bloqueado = l.revisado === true;
+    const dis = bloqueado ? 'disabled' : '';
+    const nat = naturezaDoTipo(l.tipo);
+    const corNat = nat === 'pagamento' ? 'var(--green)' : 'var(--magenta)';
+    return `
+    <tr data-idx="${l._i}">
+      <td><input data-f="data" type="date" value="${l.data||''}" ${dis}></td>
+      <td><input data-f="nome" list="dl-nomes" value="${escAttr(l.nome)}" placeholder="Nome…" ${dis}></td>
+      <td>
+        <select data-f="tipo" ${dis}>
+          <option value="" ${!l.tipo?'selected':''}>— selecione —</option>
+          ${tiposUnicos.map(t=>`<option value="${escAttr(t)}" ${nomeCanonicoTipoFinanceiro(l.tipo)===nomeCanonicoTipoFinanceiro(t)?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </td>
+      <td style="text-align:center"><span class="tag" style="color:${corNat}; background:${corNat}22;">${nat==='pagamento'?'Pagamento':'Desconto'}</span></td>
+      <td><input class="num-in" data-f="valor" type="number" step="0.01" min="0" value="${l.valor||0}" ${dis}></td>
+      <td><input data-f="observacao" value="${escAttr(l.observacao)}" placeholder="Observação (opcional)…" ${dis}></td>
+      <td style="text-align:center">
+        <button class="btn ghost" data-lock="${l._i}" title="${bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição'}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}">${bloqueado ? '🔒' : '🔓'}</button>
+      </td>
+      <td class="row-actions"><button data-del="${l._i}" title="Remover" ${dis}>✕</button></td>
+    </tr>`;
+  }).join('');
+
+  const totDesc = linhas.filter(l=>naturezaDoTipo(l.tipo)==='desconto').reduce((s,l)=>s+(Number(l.valor)||0),0);
+  const totPag = linhas.filter(l=>naturezaDoTipo(l.tipo)==='pagamento').reduce((s,l)=>s+(Number(l.valor)||0),0);
+  document.querySelector('#tblAnotacoes tfoot').innerHTML = `
+    <tr class="total-row">
+      <td colspan="4">TOTAL no filtro (${linhas.length} lançamento(s))</td>
+      <td colspan="4">${fmtBRL(totDesc)} em desconto · ${fmtBRL(totPag)} em pagamento</td>
+    </tr>`;
+
+  tbody.querySelectorAll('input[data-f],select[data-f]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      const field = e.target.dataset.f;
+      const l = lancamentosFinanceiros[idx];
+      if (l.revisado === true) return;
+      let val = e.target.value;
+      if (field === 'valor') val = parseFloat(val)||0;
+      l[field] = val;
+      autoSave('anSaveInd');
+      if (field === 'tipo') renderAnotacoes();
+    });
+  });
+  // Nome: só recalcula/reordena quando sai do campo (blur),
+  // pra não reconstruir a tabela e perder o foco a cada letra digitada.
+  // Data não dispara re-render nenhum (evita a linha "pular de lugar"
+  // na hora que você termina de preencher) — a ordenação por data se
+  // ajusta sozinha na próxima renderização natural da aba.
+  tbody.querySelectorAll('input[data-f="nome"]').forEach(inp => {
+    inp.addEventListener('blur', () => renderAnotacoes());
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      const l = lancamentosFinanceiros[idx];
+      if (l.revisado === true){
+        if (!confirm('Esse lançamento está conferido e travado. Destravar para editar?')) return;
+        l.revisado = false;
+      } else {
+        l.revisado = true;
+      }
+      autoSave('anSaveInd');
+      renderAnotacoes();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      if (lancamentosFinanceiros[idx].revisado === true){ alert('Esse lançamento está conferido e travado. Destrave antes de remover.'); return; }
+      if (!confirm('Remover esse lançamento?')) return;
+      lancamentosFinanceiros.splice(idx,1);
+      autoSave('anSaveInd');
+      renderAnotacoes();
+    });
+  });
+}
+
+function addLancamentoFinanceiro(){
+  lancamentosFinanceiros.push({data:'', nome:'', tipo:'', valor:0, observacao:'', revisado:false});
+  autoSave('anSaveInd');
+  renderAnotacoes();
+  const rows = document.querySelectorAll('#tblAnotacoes tbody tr');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="data"]');
+  last?.focus();
+}
+
+function exportarAnotacoesXlsx(){
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet([...lancamentosFinanceiros].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(l=>({
+    DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N',
+  })));
+  XLSX.utils.book_append_sheet(wb, ws, 'ANOTACOES');
+  XLSX.writeFile(wb, `anotacoes_financeiras_${mesAtivo}.xlsx`);
+}
+
+function exportarAnotacoesPdf(){
+  if (!window.jspdf){ alert('Biblioteca de PDF ainda está carregando, tente novamente em instantes.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'pt' });
+  doc.setFontSize(13);
+  doc.text(`Anotações Financeiras · ${labelMes(mesAtivo)} (registro — não integra o Fechamento)`, 30, 30);
+  const head = [['Data','Colaborador','Tipo','Natureza','Valor R$','Observação']];
+  const body = [...lancamentosFinanceiros]
+    .sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', 'pt-BR', {sensitivity:'base'}))
+    .map(l => [l.data||'', l.nome||'', l.tipo||'', naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto', fmtBRL(Number(l.valor)||0), l.observacao||'']);
+  doc.autoTable({ head, body, startY: 42, styles:{ fontSize:8 }, headStyles:{ fillColor:[33,38,46] } });
+  doc.save(`anotacoes_financeiras_${mesAtivo}.pdf`);
+}
+
+// ---------------------------------------------------------------
+// Render: FECHAMENTO
+// ---------------------------------------------------------------
+function renderDiasUteisPorEmpresa(){
+  document.getElementById('diasUteisMes').value = diasUteisMes;
+  const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const wrap = document.getElementById('diasUteisEmpresaLista');
+  wrap.innerHTML = empresas.map(emp => `
+    <label style="display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted);">
+      <span style="color:${corEmpresa(emp)}">${escAttr(emp)}</span>
+      <input class="num-in" data-emp="${escAttr(emp)}" type="number" min="0" max="31" step="1"
+        placeholder="${diasUteisMes}" value="${diasUteisPorEmpresa[emp] ?? ''}" style="width:70px">
+    </label>`).join('');
+  wrap.querySelectorAll('[data-emp]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const emp = e.target.dataset.emp;
+      const v = e.target.value;
+      if (v === '') delete diasUteisPorEmpresa[emp];
+      else diasUteisPorEmpresa[emp] = parseInt(v)||0;
+      autoSave('feSaveInd');
+      renderFechamento(); renderDashboard();
+    });
+  });
+}
+
+function dadosFechamentoFiltrados(){
+  const busca = document.getElementById('feBusca').value.trim().toUpperCase();
+  const fEmp = document.getElementById('feFiltroEmpresa').value;
+  let dados = calcularFechamento();
+  dados = dados.filter(f => (!busca || f.nome.toUpperCase().includes(busca)) && (!fEmp || f.empresa===fEmp));
+  dados.sort((a,b)=> a.nome.localeCompare(b.nome, 'pt-BR', {sensitivity:'base'}));
+  return dados;
+}
+
+function renderFechamento(){
+  renderDiasUteisPorEmpresa();
+  const dados = dadosFechamentoFiltrados();
+
+  const tbody = document.querySelector('#tblFechamento tbody');
+  if (dados.length === 0){
+    tbody.innerHTML = `<tr><td colspan="16"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum colaborador encontrado com esse filtro em ${labelMes(mesAtivo)}.</div></td></tr>`;
+    document.querySelector('#tblFechamento tfoot').innerHTML = '';
+    return;
+  }
+  tbody.innerHTML = dados.map(f => `
+    <tr>
+      <td>${escAttr(f.nome)}</td>
+      <td><span class="tag" style="color:${corEmpresa(f.empresa)}; background:${corEmpresa(f.empresa)}22;">${escAttr(f.empresa)}</span></td>
+      <td class="num grp-l">${f.diasUteis}</td>
+      <td class="num">${f.descVA}</td>
+      <td class="num">${f.descVT}</td>
+      <td class="num grp-l">${f.diasExtra}</td>
+      <td class="num">${f.dobras}</td>
+      <td class="num">${f.diasLanche}</td>
+      <td class="num grp-l">${f.totalDiasVA}</td>
+      <td class="num">${f.totalDiasVT}</td>
+      <td class="num grp-l">${fmtBRL(f.valorVA)}</td>
+      <td class="num">${fmtBRL(f.valorVT)}</td>
+      <td class="num grp-l">${decParaHora(f.horasSabado)}</td>
+      <td class="num">${decParaHora(f.horasDomingo)}</td>
+      <td class="num">${decParaHora(f.horasNoturnas)}</td>
+      <td class="num grp-l"><strong>${fmtBRL(f.total)}</strong></td>
+    </tr>`).join('');
+
+  const totais = dados.reduce((acc,f)=>{
+    acc.valorVA += f.valorVA; acc.valorVT += f.valorVT; acc.total += f.total;
+    acc.horasSabado += f.horasSabado; acc.horasDomingo += f.horasDomingo; acc.horasNoturnas += f.horasNoturnas;
+    acc.diasLanche += f.diasLanche;
+    return acc;
+  }, {valorVA:0,valorVT:0,total:0,horasSabado:0,horasDomingo:0,horasNoturnas:0,diasLanche:0});
+
+  document.querySelector('#tblFechamento tfoot').innerHTML = `
+    <tr class="total-row">
+      <td colspan="2">TOTAL</td>
+      <td class="grp-l" colspan="3">${dados.length} colaborador(es)</td>
+      <td class="grp-l"></td>
+      <td></td>
+      <td class="num">${totais.diasLanche}</td>
+      <td class="grp-l"></td>
+      <td></td>
+      <td class="num grp-l">${fmtBRL(totais.valorVA)}</td>
+      <td class="num">${fmtBRL(totais.valorVT)}</td>
+      <td class="num grp-l">${decParaHora(totais.horasSabado)}</td>
+      <td class="num">${decParaHora(totais.horasDomingo)}</td>
+      <td class="num">${decParaHora(totais.horasNoturnas)}</td>
+      <td class="num grp-l">${fmtBRL(totais.total)}</td>
+    </tr>`;
+}
+
+// ---------------------------------------------------------------
+// Render: SINCRONIZAR
+// ---------------------------------------------------------------
+function renderSincronizar(){
+  document.getElementById('mesAtualNome').textContent = labelMes(mesAtivo);
+  document.getElementById('baseAtualInfo').innerHTML = `
+    Fonte: ${escAttr(baseInfo.fonte)}<br>
+    Colaboradores: ${cadastro.length} · Ocorrências: ${ocorrencias.length} · Motivos no catálogo: ${catalogoMotivos.length}<br>
+    ${baseInfo.atualizadoEm ? 'Última atualização: ' + new Date(baseInfo.atualizadoEm).toLocaleString('pt-BR') : ''}
+  `;
+  if (!document.getElementById('syncMesAlvo').value){
+    document.getElementById('syncMesAlvo').value = mesAtivo;
+  }
+  document.getElementById('listaMeses').innerHTML = mesesDisponiveis.map(c => `
+    <div>${c===mesAtivo?'▶':'　'} <strong style="color:${c===mesAtivo?'var(--amber)':'var(--text)'}">${labelMes(c)}</strong> <span style="color:var(--muted)">(${c})</span></div>
+  `).join('');
+}
+
+// ---------------------------------------------------------------
+// Parser genérico de relatórios do sistema de ponto
+// ---------------------------------------------------------------
+function parseDataCell(v){
+  if (v == null || v === '') return '';
+  if (v instanceof Date) return v.toISOString().slice(0,10);
+  if (typeof v === 'string'){
+    let m = v.match(/^(\d{2})T\d{2}:\d{2}:\d{2}\/(\d{2})\/(\d{4})$/); // formato quebrado do sistema de ponto
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return v.slice(0,10);
+  }
+  return '';
+}
+function inferirMotivoPeloTitulo(titulo){
+  const t = normHeader(titulo);
+  if (t.includes('BANCO DE HORAS') && t.includes('NEGATIV')) return 'BANCO DE HORAS - NEGATIVO';
+  if (t.includes('BANCO DE HORAS') && t.includes('POSITIV')) return 'BANCO DE HORAS - POSITIVO';
+  if (t.includes('ATESTADO')) return 'ATESTADO MÉDICO';
+  if ((t.includes('FÉRIAS') || t.includes('FERIAS')) && t.includes('COLETIVA')) return 'FÉRIAS COLETIVA';
+  if (t.includes('FÉRIAS') || t.includes('FERIAS')) return 'FÉRIAS MENSAL';
+  if (t.includes('FALTA')) return 'FALTA';
+  return null;
+}
+function parseRelatorioPonto(rows){
+  const titulo = (rows[0]||[]).filter(Boolean).join(' ');
+  let headerIdx = -1, colMap = {};
+  for (let i=0;i<Math.min(rows.length,15);i++){
+    const row = rows[i]||[];
+    const idxNome = row.findIndex(c => normHeader(c)==='NOME');
+    if (idxNome >= 0){
+      headerIdx = i;
+      row.forEach((c,ci) => {
+        const h = normHeader(c);
+        if (!h) return;
+        if (h === 'NOME') colMap.nome = ci;
+        else if (h === 'MOTIVO') colMap.motivo = ci;
+        else if (h.includes('CLASSIFIC')) colMap.classificacao = ci;
+        else if (h.includes('INICIO') || h.includes('INÍCIO')) colMap.dataInicio = ci;
+        else if ((h.includes('FIM') || h.includes('TÉRMINO') || h.includes('TERMINO')) && h.includes('DATA')) colMap.dataFim = ci;
+        else if (h.includes('DATA') && colMap.data === undefined) colMap.data = ci;
+      });
+      break;
+    }
+  }
+  if (headerIdx === -1) return { erro: true, linhas: [], naoCatalogados: [] };
+
+  const motivoInferido = inferirMotivoPeloTitulo(titulo);
+  const linhas = [];
+  const naoCatalogados = new Set();
+
+  for (let i=headerIdx+1; i<rows.length; i++){
+    const row = rows[i]||[];
+    const nome = row[colMap.nome];
+    if (!nome) continue;
+    if (normHeader(nome).includes('TOTALIZADOR')) break;
+
+    let motivoRaw = colMap.motivo !== undefined ? row[colMap.motivo] : motivoInferido;
+    if (!motivoRaw) motivoRaw = motivoInferido || 'NÃO IDENTIFICADO';
+    const cat = buscarMotivo(motivoRaw);
+    if (!cat) naoCatalogados.add(String(motivoRaw));
+
+    let dias = 1, data = '', dataFim = '';
+    if (colMap.dataInicio !== undefined && colMap.dataFim !== undefined){
+      data = parseDataCell(row[colMap.dataInicio]);
+      dataFim = parseDataCell(row[colMap.dataFim]);
+      if (data && dataFim){
+        // desconto de VA/VT conta só dias úteis do período, não dias corridos
+        dias = diasUteisEntreDatas(data, dataFim) || 1;
+      }
+    } else if (colMap.data !== undefined){
+      data = parseDataCell(row[colMap.data]);
+    }
+
+    const classificacao = colMap.classificacao !== undefined ? row[colMap.classificacao] : null;
+    const motivoCanon = cat ? cat.motivoFolha : String(motivoRaw).trim();
+
+    linhas.push({
+      data, nome: String(nome).trim(), motivo: motivoCanon, dias,
+      horasSabado:0, horasDomingo:0, adicionalNoturno:0, lanche:false, diasVaVt:0, dobrasVa:0,
+      classificacao, origem:'ponto',
+      revisado: motivoCanon.toUpperCase().startsWith('FALTA') ? false : true,
+    });
+  }
+  return { titulo, linhas, naoCatalogados: [...naoCatalogados] };
+}
+
+// ---------------------------------------------------------------
+// Import de arquivo — detecta o tipo automaticamente
+// ---------------------------------------------------------------
+function detectarTipoArquivo(wb){
+  const nomes = wb.SheetNames.map(n=>n.toUpperCase());
+  if (nomes.includes('CADASTRO') && nomes.includes('OCORRENCIAS')) return 'mensal';
+  for (const sn of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null});
+    for (let i=0;i<Math.min(rows.length,5);i++){
+      const row = (rows[i]||[]).map(normHeader);
+      if (row.includes('MOTIVO FOLHA')) return 'catalogo';
+    }
+  }
+  return 'ponto';
+}
+
+function lerPlanilha(file){
+  const nomeArq = (file.name||'').toLowerCase();
+  if (nomeArq.endsWith('.pdf')){
+    lerCartaoPontoPdf(file);
+    return;
+  }
+  const status = document.getElementById('syncStatus');
+  const chaveAlvo = document.getElementById('syncMesAlvo').value || mesAtivo;
+  status.innerHTML = `<div class="footnote">Lendo arquivo…</div>`;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, {type:'array', cellDates:true});
+      const tipo = detectarTipoArquivo(wb);
+
+      if (tipo === 'mensal'){
+        await importarMensal(wb, chaveAlvo, file.name, status);
+      } else if (tipo === 'catalogo'){
+        await importarCatalogo(wb, file.name, status);
+      } else {
+        await importarPonto(wb, chaveAlvo, file.name, status);
+      }
+    } catch(err){
+      console.error(err);
+      status.innerHTML = `<div class="footnote">❌ Não consegui ler esse arquivo. Confira se é um .xlsx válido.</div>`;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ---------------------------------------------------------------
+// Import de Cartão Ponto em PDF (formato TIRVU)
+// ---------------------------------------------------------------
+async function extrairLinhasPdfPorPagina(file){
+  const lib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+  if (!lib){ throw new Error('Biblioteca de leitura de PDF ainda não carregou — tente novamente em instantes.'); }
+  if (!lib.GlobalWorkerOptions.workerSrc){
+    lib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+  const buf = await file.arrayBuffer();
+  const doc = await lib.getDocument({data: buf}).promise;
+  const paginas = [];
+  for (let p=1; p<=doc.numPages; p++){
+    const page = await doc.getPage(p);
+    const content = await page.getTextContent();
+    const linhasPorY = {};
+    for (const item of content.items){
+      const texto = (item.str||'').trim();
+      if (!texto) continue;
+      const y = Math.round(item.transform[5]);
+      const x = Math.round(item.transform[4]);
+      // agrupa itens cuja diferença de Y seja pequena na mesma "linha" visual
+      let chaveY = y;
+      for (const k of Object.keys(linhasPorY)){
+        if (Math.abs(Number(k) - y) <= 2){ chaveY = Number(k); break; }
+      }
+      (linhasPorY[chaveY] = linhasPorY[chaveY] || []).push({texto, x});
+    }
+    const linhas = Object.keys(linhasPorY)
+      .map(Number)
+      .sort((a,b)=>b-a)
+      .map(y => linhasPorY[y].sort((a,b)=>a.x-b.x));
+    paginas.push(linhas);
+  }
+  return paginas;
+}
+
+function parseCartaoPontoPdf(paginas){
+  const linhas = [];
+  const naoCatalogados = new Set();
+  let algumaPagina = false;
+
+  for (const itensPorLinha of paginas){
+    // Nome do colaborador: item "Nome" em x~14, valor iniciando com ":" na mesma linha
+    let nome = null;
+    for (const linha of itensPorLinha){
+      const temLabelNome = linha.some(it => it.x <= 22 && it.x >= 8 && it.texto === 'Nome');
+      if (!temLabelNome) continue;
+      const valor = linha.find(it => it.x >= 44 && it.x <= 60 && it.texto.startsWith(':'));
+      if (valor){ nome = valor.texto.replace(/^:\s*/,'').trim(); }
+      break;
+    }
+    if (!nome) continue; // página sem cabeçalho reconhecível — ignora
+    algumaPagina = true;
+
+    for (const linha of itensPorLinha){
+      const itemData = linha.find(it => it.x >= 10 && it.x <= 55 && /^\d{2}\/\d{2}\/\d{4}$/.test(it.texto));
+      if (!itemData) continue;
+      const itensObs = linha.filter(it => it.x >= 340).sort((a,b)=>a.x-b.x);
+      const observacao = itensObs.map(it=>it.texto).join(' ').trim();
+      if (!observacao) continue; // sem observação = dia normal, nada a lançar
+
+      const [dd,mm,yyyy] = itemData.texto.split('/');
+      const data = `${yyyy}-${mm}-${dd}`;
+      const motivoRaw = observacao;
+      const cat = buscarMotivo(motivoRaw);
+      if (!cat) naoCatalogados.add(motivoRaw);
+      const motivoCanon = cat ? cat.motivoFolha : motivoRaw;
+
+      linhas.push({
+        data, nome, motivo: motivoCanon, dias: 1,
+        horasSabado:0, horasDomingo:0, adicionalNoturno:0, lanche:false, diasVaVt:0, dobrasVa:0,
+        classificacao: null, origem:'ponto',
+        revisado: motivoCanon.toUpperCase().startsWith('FALTA') ? false : true,
+      });
+    }
+  }
+  return { linhas, naoCatalogados: [...naoCatalogados], algumaPagina };
+}
+
+async function lerCartaoPontoPdf(file){
+  const status = document.getElementById('syncStatus');
+  const chaveAlvo = document.getElementById('syncMesAlvo').value || mesAtivo;
+  status.innerHTML = `<div class="footnote">Lendo PDF… (arquivos grandes com várias páginas podem levar alguns segundos)</div>`;
+  try {
+    const paginas = await extrairLinhasPdfPorPagina(file);
+    const { linhas: todasLinhas, naoCatalogados, algumaPagina } = parseCartaoPontoPdf(paginas);
+
+    if (!algumaPagina){
+      status.innerHTML = `<div class="footnote">❌ Não reconheci esse PDF como um Cartão Ponto (não achei o campo "Nome" no cabeçalho de nenhuma página).</div>`;
+      return;
+    }
+    if (todasLinhas.length === 0){
+      status.innerHTML = `<div class="footnote">⚠ Li ${paginas.length} página(s), mas nenhum dia tinha "Observações" preenchida — nada para lançar (nenhuma ocorrência encontrada).</div>`;
+      return;
+    }
+
+    if (!mesesDisponiveis.includes(chaveAlvo)){
+      mesesDisponiveis.push(chaveAlvo); mesesDisponiveis.sort(); await salvarIndiceMeses(); popularSeletorMes();
+    }
+    if (chaveAlvo !== mesAtivo){
+      const dados = await carregarDadosMes(chaveAlvo);
+      mesAtivo = chaveAlvo;
+      cadastro = dados?.cadastro || cadastro;
+      ocorrencias = dados?.ocorrencias || [];
+      lancamentosFinanceiros = dados?.lancamentosFinanceiros || [];
+      diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
+      baseInfo = dados?.baseInfo || baseInfo;
+    }
+
+    const nomesCadastro = new Set(cadastro.map(c=>normHeader(c.nome)));
+    const semCadastro = new Set();
+    todasLinhas.forEach(l => { if (!nomesCadastro.has(normHeader(l.nome))) semCadastro.add(l.nome); });
+
+    const { adicionadas, atualizadas } = mesclarOcorrenciasPonto(todasLinhas);
+    baseInfo = { fonte: `+ Cartão Ponto (PDF): ${file.name}`, atualizadoEm: new Date().toISOString() };
+    await salvarDadosMes(chaveAlvo);
+    await salvarMesAtivoPreferido();
+    popularSeletorMes();
+    renderTudo();
+
+    const faltas = todasLinhas.filter(l => l.motivo.toUpperCase().startsWith('FALTA'));
+    const colaboradores = new Set(todasLinhas.map(l=>l.nome)).size;
+    let msg = `<div class="footnote">✅ Li ${paginas.length} página(s) (${colaboradores} colaborador(es)): ${adicionadas} ocorrência(s) nova(s)`;
+    if (atualizadas > 0) msg += ` e ${atualizadas} já existente(s) atualizada(s) (corrigidas)`;
+    msg += ` em ${labelMes(chaveAlvo)}.</div>`;
+    if (faltas.length > 0){
+      msg += `<div class="alert-banner" style="margin-top:10px;"><span class="alert-icon">⚠</span><div><strong>${faltas.length} falta(s) importada(s) — revise antes de descontar na folha.</strong> Marcadas como pendentes na aba Ocorrências.</div></div>`;
+    }
+    if (naoCatalogados.length > 0){
+      msg += `<div class="footnote" style="color:var(--amber); margin-top:6px;">Motivo(s) fora do catálogo (não descontam VA/VT por padrão): ${naoCatalogados.join(', ')}. Cadastre em Motivos se precisar.</div>`;
+    }
+    if (semCadastro.size > 0){
+      msg += `<div class="footnote" style="color:var(--magenta); margin-top:6px;">Nome(s) sem cadastro em ${labelMes(chaveAlvo)} (não entram no fechamento): ${[...semCadastro].join(', ')}.</div>`;
+    }
+    status.innerHTML = msg;
+  } catch(err){
+    console.error(err);
+    const status2 = document.getElementById('syncStatus');
+    status2.innerHTML = `<div class="footnote">❌ Não consegui ler esse PDF (${(err&&err.message)||'erro desconhecido'}). Confira se é um Cartão Ponto no formato TIRVU.</div>`;
+  }
+}
+
+async function importarMensal(wb, chaveAlvo, nomeArquivo, status){
+  const shCad = wb.Sheets['CADASTRO'];
+  const shOc = wb.Sheets['OCORRENCIAS'];
+  const rowsCad = XLSX.utils.sheet_to_json(shCad, {defval:null});
+  const rowsOc = XLSX.utils.sheet_to_json(shOc, {defval:null, raw:false, dateNF:'yyyy-mm-dd'});
+
+  const novoCadastro = rowsCad
+    .filter(r => r['NOME'])
+    .map(r => ({
+      nome: String(r['NOME']).trim(),
+      empresa: String(r['EMPRESA']||'').trim(),
+      va: parseNumeroBR(r['VALOR VA'] ?? r['VALOR VA ']),
+      vt: parseNumeroBR(r['VALOR VT']),
+      funcao: String(r['FUNÇÃO']||'').trim(),
+    }));
+
+  const chaveNome = Object.keys(rowsOc[0]||{}).find(k => k.trim().toUpperCase().startsWith('NOME')) || 'NOME';
+  const novasOcorrencias = rowsOc
+    .filter(r => r[chaveNome])
+    .map(r => {
+      let data = r['DATA'];
+      if (data && typeof data === 'object' && data.toISOString) data = data.toISOString().slice(0,10);
+      const adicionalNoturno = parseNumeroBR(r['ADICIONAL NOTURNO']);
+      const lancheRaw = r['LANCHE'];
+      const lanche = lancheRaw != null
+        ? /^(s|sim|1|true|x)$/i.test(String(lancheRaw).trim())
+        : adicionalNoturno > 0;
+      return {
+        data: data || '', nome: String(r[chaveNome]).trim(), motivo: String(r['MOTIVO']||'').trim(), dias: 1,
+        horasSabado: parseNumeroBR(r['HORAS SABADO'] ?? r['HORAS SABADO ']),
+        horasDomingo: parseNumeroBR(r['HORAS DOMINGO']),
+        adicionalNoturno,
+        lanche,
+        diasVaVt: parseNumeroBR(r['DIAS DE VA E VT']),
+        dobrasVa: parseNumeroBR(r['DOBRAS VA']),
+        revisado: true, origem:'manual',
+      };
+    });
+
+  if (novoCadastro.length === 0){
+    status.innerHTML = `<div class="footnote">❌ Não encontrei colaboradores na aba CADASTRO. Confira os cabeçalhos das colunas.</div>`;
+    return;
+  }
+
+  if (!mesesDisponiveis.includes(chaveAlvo)){
+    mesesDisponiveis.push(chaveAlvo); mesesDisponiveis.sort(); await salvarIndiceMeses(); popularSeletorMes();
+  }
+  mesAtivo = chaveAlvo;
+  cadastro = novoCadastro;
+  ocorrencias = novasOcorrencias;
+  diasUteisMes = diasUteisDoMes(chaveAlvo);
+  baseInfo = { fonte: `Lançamentos mensal importado: ${nomeArquivo}`, atualizadoEm: new Date().toISOString() };
+  await salvarDadosMes(chaveAlvo);
+  await salvarMesAtivoPreferido();
+  popularSeletorMes();
+  renderTudo();
+  status.innerHTML = `<div class="footnote">✅ ${labelMes(chaveAlvo)} sincronizado: ${cadastro.length} colaboradores, ${ocorrencias.length} ocorrências.</div>`;
+}
+
+async function importarCatalogo(wb, nomeArquivo, status){
+  const sn = wb.SheetNames.find(n => {
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[n], {header:1, defval:null});
+    return rows.slice(0,5).some(r => (r||[]).map(normHeader).includes('MOTIVO FOLHA'));
+  });
+  const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {defval:null});
+  const vistos = new Set();
+  const novoCatalogo = [];
+  for (const r of rows){
+    const motivo = r['Motivo'];
+    if (!motivo) continue;
+    const key = normHeader(motivo);
+    if (vistos.has(key)) continue;
+    vistos.add(key);
+    novoCatalogo.push({
+      motivo: String(motivo).trim(),
+      motivoFolha: r['Motivo Folha'] ? String(r['Motivo Folha']).trim() : String(motivo).trim(),
+      abona: normHeader(r['Abona']) === 'S',
+      impedePonto: normHeader(r['Impede Ponto']) === 'S',
+      descontaVA: normHeader(r['Desconta VA']) === 'S',
+      descontaVT: normHeader(r['Desconta VT']) === 'S',
+    });
+  }
+  if (novoCatalogo.length === 0){
+    status.innerHTML = `<div class="footnote">❌ Não encontrei motivos válidos nesse catálogo.</div>`;
+    return;
+  }
+  // preserva os ajustes de política já feitos (ex: home office, trabalho externo) quando o motivo já existia
+  const anterior = {};
+  catalogoMotivos.forEach(c => anterior[normHeader(c.motivo)] = c);
+  novoCatalogo.forEach(c => {
+    const prev = anterior[normHeader(c.motivo)];
+    if (prev) { c.descontaVA = prev.descontaVA; c.descontaVT = prev.descontaVT; }
+  });
+
+  catalogoMotivos = removerMotivosUF(novoCatalogo);
+  await salvarCatalogoMotivos();
+  renderTudo();
+  ativarTab('motivos');
+  status.innerHTML = `<div class="footnote">✅ Catálogo de motivos atualizado: ${catalogoMotivos.length} motivos (${nomeArquivo}). Os ajustes de desconto que você já tinha feito foram mantidos.</div>`;
+}
+
+// ---------------------------------------------------------------
+// Mescla ocorrências vindas de importação de ponto (PDF/XLSX) sem duplicar:
+// se já existe uma ocorrência de origem "ponto" pro mesmo colaborador+data,
+// ATUALIZA em vez de adicionar de novo — assim, corrigir e subir de novo
+// não dobra o lançamento. Ocorrências manuais nunca são tocadas/sobrescritas.
+// ---------------------------------------------------------------
+function mesclarOcorrenciasPonto(novasLinhas){
+  let adicionadas = 0, atualizadas = 0;
+  novasLinhas.forEach(nova => {
+    const chave = `${normHeader(nova.nome)}|${nova.data}`;
+    const existente = ocorrencias.find(o => o.origem === 'ponto' && `${normHeader(o.nome)}|${o.data}` === chave);
+    if (existente){
+      Object.assign(existente, nova);
+      atualizadas++;
+    } else {
+      ocorrencias.push(nova);
+      adicionadas++;
+    }
+  });
+  return { adicionadas, atualizadas };
+}
+
+async function importarPonto(wb, chaveAlvo, nomeArquivo, status){
+  let todasLinhas = [];
+  let naoCatalogados = new Set();
+  let algumaAba = false;
+
+  for (const sn of wb.SheetNames){
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[sn], {header:1, defval:null});
+    const resultado = parseRelatorioPonto(rows);
+    if (resultado.erro) continue;
+    algumaAba = true;
+    todasLinhas = todasLinhas.concat(resultado.linhas);
+    resultado.naoCatalogados.forEach(m => naoCatalogados.add(m));
+  }
+
+  if (!algumaAba || todasLinhas.length === 0){
+    status.innerHTML = `<div class="footnote">❌ Não reconheci esse arquivo. Preciso de uma coluna "Nome" para importar como relatório do ponto.</div>`;
+    return;
+  }
+
+  if (!mesesDisponiveis.includes(chaveAlvo)){
+    mesesDisponiveis.push(chaveAlvo); mesesDisponiveis.sort(); await salvarIndiceMeses(); popularSeletorMes();
+  }
+  if (chaveAlvo !== mesAtivo){
+    const dados = await carregarDadosMes(chaveAlvo);
+    mesAtivo = chaveAlvo;
+    cadastro = dados?.cadastro || cadastro;
+    ocorrencias = dados?.ocorrencias || [];
+    diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
+    baseInfo = dados?.baseInfo || baseInfo;
+  }
+
+  const nomesCadastro = new Set(cadastro.map(c=>normHeader(c.nome)));
+  const semCadastro = new Set();
+  todasLinhas.forEach(l => { if (!nomesCadastro.has(normHeader(l.nome))) semCadastro.add(l.nome); });
+
+  const { adicionadas, atualizadas } = mesclarOcorrenciasPonto(todasLinhas);
+  baseInfo = { fonte: `+ Relatório do ponto: ${nomeArquivo}`, atualizadoEm: new Date().toISOString() };
+  await salvarDadosMes(chaveAlvo);
+  await salvarMesAtivoPreferido();
+  popularSeletorMes();
+  renderTudo();
+
+  const faltas = todasLinhas.filter(l => l.motivo.toUpperCase().startsWith('FALTA'));
+  let msg = `<div class="footnote">✅ ${adicionadas} ocorrência(s) nova(s) somada(s)`;
+  if (atualizadas > 0) msg += ` e ${atualizadas} já existente(s) atualizada(s) (corrigidas)`;
+  msg += ` em ${labelMes(chaveAlvo)}.</div>`;
+  if (faltas.length > 0){
+    msg += `<div class="alert-banner" style="margin-top:10px;"><span class="alert-icon">⚠</span><div><strong>${faltas.length} falta(s) importada(s) — revise antes de descontar na folha.</strong> Marcadas como pendentes na aba Ocorrências.</div></div>`;
+  }
+  if (naoCatalogados.size > 0){
+    msg += `<div class="footnote" style="color:var(--amber); margin-top:6px;">Motivo(s) fora do catálogo (não descontam VA/VT por padrão): ${[...naoCatalogados].join(', ')}. Cadastre em Motivos se precisar.</div>`;
+  }
+  if (semCadastro.size > 0){
+    msg += `<div class="footnote" style="color:var(--magenta); margin-top:6px;">Nome(s) sem cadastro em ${labelMes(chaveAlvo)} (não entram no fechamento): ${[...semCadastro].join(', ')}.</div>`;
+  }
+  status.innerHTML = msg;
+}
+
+// ---------------------------------------------------------------
+// Export CSV / XLSX
+// ---------------------------------------------------------------
+function sufixoFiltro(){
+  const busca = document.getElementById('feBusca').value.trim();
+  const fEmp = document.getElementById('feFiltroEmpresa').value;
+  if (busca) return `_${busca.replace(/[^a-zA-Z0-9]+/g,'-')}`;
+  if (fEmp) return `_${fEmp.replace(/[^a-zA-Z0-9]+/g,'-')}`;
+  return '';
+}
+
+function exportarCsv(){
+  const dados = dadosFechamentoFiltrados();
+  const header = ['Nome','Empresa','Dias úteis','Desc. VA','Desc. VT','Dias extra','Dobras','Dias Lanche','Total dias VA','Total dias VT','Valor VA','Valor VT','H. Sábado (50%)','H. Domingo (100%)','H. Noturnas','Total R$'];
+  const linhas = dados.map(f => [f.nome,f.empresa,f.diasUteis,f.descVA,f.descVT,f.diasExtra,f.dobras,f.diasLanche,f.totalDiasVA,f.totalDiasVT,f.valorVA.toFixed(2),f.valorVT.toFixed(2),decParaHora(f.horasSabado),decParaHora(f.horasDomingo),decParaHora(f.horasNoturnas),f.total.toFixed(2)]);
+  const csv = [header, ...linhas].map(l => l.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  baixar(blob, `fechamento_${mesAtivo}${sufixoFiltro()}.csv`);
+}
+
+function exportarPdf(){
+  const dados = dadosFechamentoFiltrados();
+  if (!window.jspdf){ alert('Biblioteca de PDF ainda está carregando, tente novamente em instantes.'); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'landscape', unit:'pt' });
+  const busca = document.getElementById('feBusca').value.trim();
+  const fEmp = document.getElementById('feFiltroEmpresa').value;
+  let titulo = `Fechamento · ${labelMes(mesAtivo)}`;
+  if (fEmp) titulo += ` · Empresa: ${fEmp}`;
+  if (busca) titulo += ` · Colaborador: ${busca}`;
+  doc.setFontSize(13);
+  doc.text(titulo, 30, 30);
+
+  const head = [['Nome','Empresa','Dias úteis','Desc. VA','Desc. VT','Dias extra','Dobras','Dias Lanche','Total VA','Total VT','Valor VA','Valor VT','H. Sáb. (50%)','H. Dom. (100%)','H. Not.','Total R$']];
+  const body = dados.map(f => [f.nome,f.empresa,f.diasUteis,f.descVA,f.descVT,f.diasExtra,f.dobras,f.diasLanche,f.totalDiasVA,f.totalDiasVT,fmtBRL(f.valorVA),fmtBRL(f.valorVT),decParaHora(f.horasSabado),decParaHora(f.horasDomingo),decParaHora(f.horasNoturnas),fmtBRL(f.total)]);
+  const totais = dados.reduce((acc,f)=>{ acc.valorVA+=f.valorVA; acc.valorVT+=f.valorVT; acc.total+=f.total; return acc; }, {valorVA:0,valorVT:0,total:0});
+  body.push(['TOTAL',`${dados.length} colaborador(es)`,'','','','','','','','','','','','','', fmtBRL(totais.total)]);
+
+  doc.autoTable({ head, body, startY: 42, styles:{ fontSize:7 }, headStyles:{ fillColor:[33,38,46] } });
+  doc.save(`fechamento_${mesAtivo}${sufixoFiltro()}.pdf`);
+}
+
+function exportarXlsx(){
+  const dados = dadosFechamentoFiltrados();
+  const wb = XLSX.utils.book_new();
+
+  const wsCad = XLSX.utils.json_to_sheet(cadastro.map(c=>({NOME:c.nome,EMPRESA:c.empresa,'VALOR VA':c.va,'VALOR VT':c.vt,'FUNÇÃO':c.funcao})));
+  XLSX.utils.book_append_sheet(wb, wsCad, 'CADASTRO');
+
+  const wsOc = XLSX.utils.json_to_sheet(ocorrencias.map(o=>({DATA:o.data,NOME:o.nome,MOTIVO:nomeCanonico(o.motivo),DIAS:o.dias||1,'HORAS SABADO (50%)':o.horasSabado,'HORAS DOMINGO (100%)':o.horasDomingo,'ADICIONAL NOTURNO':o.adicionalNoturno,'LANCHE':o.lanche?'S':'N','DIAS DE VA E VT':o.diasVaVt,'DOBRAS VA':o.dobrasVa})));
+  XLSX.utils.book_append_sheet(wb, wsOc, 'OCORRENCIAS');
+
+  const wsFe = XLSX.utils.json_to_sheet(dados.map(f=>({
+    Nome:f.nome, Empresa:f.empresa, 'Dias Úteis Mês':f.diasUteis,
+    'Desc. VA (Dias)':f.descVA, 'Desc. VT (Dias)':f.descVT, 'Dias Extra (HE)':f.diasExtra, 'Dias Dobras':f.dobras, 'Dias Lanche':f.diasLanche,
+    'Total Dias VA':f.totalDiasVA, 'Total Dias VT':f.totalDiasVT,
+    'VALOR VA R$': Number(f.valorVA.toFixed(2)), 'VALOR VT R$': Number(f.valorVT.toFixed(2)),
+    'Total Horas Sabado (50%)':decParaHora(f.horasSabado), 'Total Horas Domingo (100%)':decParaHora(f.horasDomingo), 'Total de Horas Noturnas':decParaHora(f.horasNoturnas),
+    'TOTAL R$': Number(f.total.toFixed(2)),
+  })));
+  XLSX.utils.book_append_sheet(wb, wsFe, 'FECHAMENTO');
+
+  const wsMo = XLSX.utils.json_to_sheet(catalogoMotivos.map(m=>({Motivo:m.motivo,'Motivo Folha':m.motivoFolha,'Desconta VA':m.descontaVA?'S':'N','Desconta VT':m.descontaVT?'S':'N'})));
+  XLSX.utils.book_append_sheet(wb, wsMo, 'MOTIVOS');
+
+  const wsAn = XLSX.utils.json_to_sheet(lancamentosFinanceiros.map(l=>({
+    DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N',
+  })));
+  XLSX.utils.book_append_sheet(wb, wsAn, 'ANOTACOES (nao entra no total)');
+
+  XLSX.writeFile(wb, `fechamento_${mesAtivo}${sufixoFiltro()}.xlsx`);
+}
+
+function baixar(blob, nome){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nome;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------
+// Formulário rápido: novo colaborador / nova ocorrência
+// ---------------------------------------------------------------
+function addColaborador(){
+  cadastro.push({nome:'NOVO COLABORADOR', empresa: cadastro[0]?.empresa || 'ILED', funcao:'EXTERNA', va:0, vt:0});
+  autoSave('cadSaveInd');
+  renderCadastro(); renderDashboard(); renderFechamento();
+  const rows = document.querySelectorAll('#tblCadastro tbody tr');
+  rows[rows.length-1]?.querySelector('input')?.focus();
+  rows[rows.length-1]?.querySelector('input')?.select();
+}
+function addOcorrencia(){
+  // Todos os campos começam em branco/zerados — preenchimento é 100% manual,
+  // não puxa nome, motivo nem data automaticamente de nenhum colaborador.
+  ocorrencias.push({data:'', dataFim:'', nome:'', motivo:'', dias:1, horasSabado:0, horasDomingo:0, adicionalNoturno:0, lanche:false, diasVaVt:0, dobrasVa:0, revisado:false, origem:'manual'});
+  autoSave('ocSaveInd');
+  renderOcorrencias(); renderDashboard(); renderFechamento();
+  const rows = document.querySelectorAll('#tblOcorrencias tbody tr');
+  rows[rows.length-1]?.querySelector('input[data-f="nome"]')?.focus();
+}
+
+// ---------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------
+function ativarTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+tab));
+}
+
+function renderTudo(){
+  popularSeletorMes();
+  renderDashboard();
+  renderCadastro();
+  renderOcorrencias();
+  renderMotivos();
+  renderFechamento();
+  renderAnotacoes();
+  renderSincronizar();
+}
+
+// ---------------------------------------------------------------
+// Init
+// ---------------------------------------------------------------
+async function init(){
+  const catalogoSalvo = await carregarCatalogoMotivos();
+  catalogoMotivos = removerMotivosUF(catalogoSalvo || JSON.parse(JSON.stringify(ORIGINAL_MOTIVOS)));
+  // Migração: garante que "PAGAR LANCHE" exista mesmo em catálogos já salvos
+  if (!catalogoMotivos.some(m => normHeader(m.motivo) === 'PAGAR LANCHE')){
+    catalogoMotivos.push({motivo:'PAGAR LANCHE', motivoFolha:'PAGAR LANCHE', abona:false, impedePonto:false, descontaVA:false, descontaVT:false});
+  }
+  // Migração: alinha o catálogo com a regra oficial do sistema de ponto
+  // (planilha "Cadastro de Motivos") — corrige quem já existe com valor errado
+  // e adiciona quem estava faltando. Nada é removido.
+  const REGRA_OFICIAL_MOTIVOS = [
+    {motivo:'ATESTADO MÉDICO', descontaVA:true, descontaVT:true},
+    {motivo:'DECLARAÇÃO DE COMPARECIMENTO - DIA', descontaVA:true, descontaVT:true},
+    {motivo:'DIA ABONADO PELO GESTOR', descontaVA:true, descontaVT:true},
+    {motivo:'FALTA INJUSTIFICADA', descontaVA:true, descontaVT:true},
+    {motivo:'FALTA JUSTIFICADA', descontaVA:true, descontaVT:true},
+    {motivo:'FÉRIAS', descontaVA:true, descontaVT:true},
+    {motivo:'FÉRIAS COLETIVA', descontaVA:true, descontaVT:true},
+    {motivo:'FÉRIAS MENSAL', descontaVA:true, descontaVT:true},
+    {motivo:'FOLGA', descontaVA:true, descontaVT:true},
+    {motivo:'HOME OFFICE', descontaVA:false, descontaVT:true},
+    {motivo:'HORA EXTRA FIM DE SEMANA', descontaVA:false, descontaVT:false},
+    {motivo:'HRS ABONADAS PELO GESTOR', descontaVA:false, descontaVT:false},
+    {motivo:'HRS NEG. JUSTIFICADAS - BANCO NEGATIVO', descontaVA:true, descontaVT:true},
+    {motivo:'LIBERADO PELO GESTOR - SEM DESCONTO HRS', descontaVA:true, descontaVT:true},
+    {motivo:'LICENÇA CASAMENTO', descontaVA:true, descontaVT:true},
+    {motivo:'LIÇENCA PATERNIDADE', descontaVA:true, descontaVT:true},
+    {motivo:'SALDO EM BANCO DE HRS - NEGATIVO', descontaVA:true, descontaVT:true},
+    {motivo:'SALDO EM BANCO DE HRS - POSITIVO', descontaVA:true, descontaVT:true},
+    {motivo:'SUSPENSÃO', descontaVA:true, descontaVT:true},
+    {motivo:'TESTE PONTO', descontaVA:false, descontaVT:false},
+    {motivo:'TRABALHO EXTERNO', descontaVA:false, descontaVT:false},
+  ];
+  REGRA_OFICIAL_MOTIVOS.forEach(regra => {
+    const alvo = normHeader(regra.motivo);
+    const existente = catalogoMotivos.find(m => normHeader(m.motivo) === alvo);
+    if (existente){
+      existente.descontaVA = regra.descontaVA;
+      existente.descontaVT = regra.descontaVT;
+      existente.motivoFolha = regra.motivo;
+    } else {
+      catalogoMotivos.push({motivo:regra.motivo, motivoFolha:regra.motivo, abona:false, impedePonto:false, descontaVA:regra.descontaVA, descontaVT:regra.descontaVT});
+    }
+  });
+  await salvarCatalogoMotivos();
+
+  const catalogoFinanceiroSalvo = await carregarCatalogoFinanceiro();
+  catalogoTiposFinanceiros = catalogoFinanceiroSalvo || JSON.parse(JSON.stringify(CATALOGO_FINANCEIRO_PADRAO));
+  await salvarCatalogoFinanceiro();
+
+  let indice = await carregarIndiceMeses();
+  if (!indice || indice.length === 0){
+    mesesDisponiveis = [MES_SEMENTE];
+    await salvarIndiceMeses();
+    cadastro = JSON.parse(JSON.stringify(ORIGINAL_CADASTRO));
+    ocorrencias = JSON.parse(JSON.stringify(ORIGINAL_OCORRENCIAS)).map(o => ({...o, dias:1, revisado:true, origem:'manual'}));
+    lancamentosFinanceiros = [];
+    diasUteisMes = 23;
+    diasUteisPorEmpresa = {};
+    baseInfo = { fonte: 'Base original enviada (06/2026)', atualizadoEm: null };
+    mesAtivo = MES_SEMENTE;
+    await salvarDadosMes(MES_SEMENTE);
+    await salvarMesAtivoPreferido();
+  } else {
+    mesesDisponiveis = indice;
+    const preferido = await carregarMesAtivoPreferido();
+    mesAtivo = (preferido && mesesDisponiveis.includes(preferido)) ? preferido : mesesDisponiveis[mesesDisponiveis.length-1];
+    const dados = await carregarDadosMes(mesAtivo);
+    cadastro = dados?.cadastro || [];
+    ocorrencias = dados?.ocorrencias || [];
+    lancamentosFinanceiros = dados?.lancamentosFinanceiros || [];
+    diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(mesAtivo);
+    diasUteisPorEmpresa = dados?.diasUteisPorEmpresa || {};
+    baseInfo = dados?.baseInfo || { fonte:'—', atualizadoEm:null };
+  }
+
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => ativarTab(btn.dataset.tab));
+  });
+
+  document.getElementById('selMes').addEventListener('change', e => abrirMes(e.target.value));
+  document.getElementById('btnNovoMes').addEventListener('click', criarNovoMes);
+  document.getElementById('btnSalvarAgora').addEventListener('click', () => salvarTudo(true));
+
+  document.getElementById('cadBusca').addEventListener('input', renderCadastro);
+  document.getElementById('cadFiltroEmpresa').addEventListener('change', renderCadastro);
+  document.getElementById('cadFiltroFuncao').addEventListener('change', renderCadastro);
+  document.getElementById('btnAddCadastro').addEventListener('click', addColaborador);
+  document.getElementById('btnExportCadXlsx').addEventListener('click', exportarCadastroXlsx);
+  document.getElementById('btnExportCadPdf').addEventListener('click', exportarCadastroPdf);
+
+  document.getElementById('ocBusca').addEventListener('input', renderOcorrencias);
+  document.getElementById('ocFiltroMotivo').addEventListener('change', renderOcorrencias);
+  document.getElementById('ocFiltroData').addEventListener('change', renderOcorrencias);
+  document.getElementById('ocSoNaoRevisadas').addEventListener('change', renderOcorrencias);
+  document.getElementById('btnAddOcorrencia').addEventListener('click', addOcorrencia);
+  document.getElementById('btnExportOcCsv').addEventListener('click', exportarOcorrenciasCsv);
+  document.getElementById('btnExportOcXlsx').addEventListener('click', exportarOcorrenciasXlsx);
+  document.getElementById('btnExportOcPdf').addEventListener('click', exportarOcorrenciasPdf);
+  document.querySelectorAll('#tblOcorrencias th.sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const campo = th.dataset.sort;
+      if (ocOrdenacao.campo === campo){
+        ocOrdenacao.dir = ocOrdenacao.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        ocOrdenacao.campo = campo;
+        ocOrdenacao.dir = campo === 'data' ? 'desc' : 'asc';
+      }
+      renderOcorrencias();
+    });
+  });
+  document.getElementById('ocSelecionarTodos').addEventListener('change', e => {
+    const idsVisiveis = [...document.querySelectorAll('#tblOcorrencias tbody tr[data-idx]')].map(tr=>Number(tr.dataset.idx));
+    if (e.target.checked){ idsVisiveis.forEach(i=>ocSelecionados.add(i)); }
+    else { idsVisiveis.forEach(i=>ocSelecionados.delete(i)); }
+    renderOcorrencias();
+  });
+  document.getElementById('btnBulkConferir').addEventListener('click', () => {
+    if (ocSelecionados.size === 0) return;
+    ocSelecionados.forEach(idx => { if (ocorrencias[idx]) ocorrencias[idx].revisado = true; });
+    ocSelecionados.clear();
+    autoSave('ocSaveInd');
+    renderOcorrencias(); renderDashboard(); renderFechamento();
+  });
+  document.getElementById('btnBulkDestravar').addEventListener('click', () => {
+    if (ocSelecionados.size === 0) return;
+    ocSelecionados.forEach(idx => { if (ocorrencias[idx]) ocorrencias[idx].revisado = false; });
+    ocSelecionados.clear();
+    autoSave('ocSaveInd');
+    renderOcorrencias(); renderDashboard(); renderFechamento();
+  });
+  document.getElementById('btnBulkRemover').addEventListener('click', () => {
+    if (ocSelecionados.size === 0) return;
+    const travadas = [...ocSelecionados].filter(idx => ocorrencias[idx]?.revisado === true);
+    if (travadas.length > 0){
+      alert(`${travadas.length} das selecionadas estão conferidas/travadas. Use "🔓 Destravar selecionados" antes de remover.`);
+      return;
+    }
+    if (!confirm(`Remover ${ocSelecionados.size} ocorrência(s) selecionada(s)? Essa ação não pode ser desfeita.`)) return;
+    [...ocSelecionados].sort((a,b)=>b-a).forEach(idx => ocorrencias.splice(idx,1));
+    ocSelecionados.clear();
+    autoSave('ocSaveInd');
+    renderOcorrencias(); renderDashboard(); renderFechamento();
+  });
+  document.getElementById('btnBulkLimpar').addEventListener('click', () => {
+    ocSelecionados.clear();
+    renderOcorrencias();
+  });
+
+  document.getElementById('moBusca').addEventListener('input', renderMotivos);
+  document.getElementById('btnAddMotivo').addEventListener('click', addMotivo);
+
+  document.getElementById('btnAddTipoFinanceiro').addEventListener('click', addTipoFinanceiro);
+  document.getElementById('anBusca').addEventListener('input', renderAnotacoes);
+  document.getElementById('anFiltroTipo').addEventListener('change', renderAnotacoes);
+  document.getElementById('anFiltroNatureza').addEventListener('change', renderAnotacoes);
+  document.getElementById('anFiltroData').addEventListener('change', renderAnotacoes);
+  document.getElementById('anSoNaoConferidos').addEventListener('change', renderAnotacoes);
+  document.getElementById('btnAddLancamento').addEventListener('click', addLancamentoFinanceiro);
+  document.getElementById('btnExportAnXlsx').addEventListener('click', exportarAnotacoesXlsx);
+  document.getElementById('btnExportAnPdf').addEventListener('click', exportarAnotacoesPdf);
+
+  document.getElementById('diasUteisMes').addEventListener('input', e => {
+    diasUteisMes = parseInt(e.target.value)||0;
+    autoSave('feSaveInd'); renderFechamento(); renderDashboard();
+  });
+  document.getElementById('feBusca').addEventListener('input', renderFechamento);
+  document.getElementById('feFiltroEmpresa').addEventListener('change', renderFechamento);
+  document.getElementById('btnExportCsv').addEventListener('click', exportarCsv);
+  document.getElementById('btnExportXlsx').addEventListener('click', exportarXlsx);
+  document.getElementById('btnExportPdf').addEventListener('click', exportarPdf);
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  dropZone.addEventListener('click', ()=>fileInput.click());
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) lerPlanilha(e.target.files[0]); });
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag');
+    if (e.dataTransfer.files[0]) lerPlanilha(e.dataTransfer.files[0]);
+  });
+  document.getElementById('btnResetBase').addEventListener('click', async () => {
+    if (mesAtivo === MES_SEMENTE){
+      if (!confirm(`Isso vai descartar as edições de ${labelMes(mesAtivo)} e voltar para a base original enviada. Continuar?`)) return;
+      cadastro = JSON.parse(JSON.stringify(ORIGINAL_CADASTRO));
+      ocorrencias = JSON.parse(JSON.stringify(ORIGINAL_OCORRENCIAS)).map(o => ({...o, dias:1, revisado:true, origem:'manual'}));
+      diasUteisMes = 23;
+      diasUteisPorEmpresa = {};
+      baseInfo = { fonte: 'Base original enviada (06/2026)', atualizadoEm: null };
+    } else {
+      if (!confirm(`Isso vai apagar todas as ocorrências lançadas em ${labelMes(mesAtivo)} (o cadastro é mantido). Continuar?`)) return;
+      ocorrencias = [];
+      baseInfo = { fonte: 'Ocorrências limpas manualmente', atualizadoEm: new Date().toISOString() };
+    }
+    await salvarDadosMes(mesAtivo);
+    renderTudo();
+  });
+
+  renderTudo();
+  avaliarLembreteBackup();
+  setInterval(avaliarLembreteBackup, 15 * 60 * 1000);
+}
+
+init();
+
+</script>
+</body>
+</html>
+
