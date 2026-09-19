@@ -8,111 +8,111 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg: #14171c;
-    --surface: #1b1f26;
-    --surface-2: #21262e;
-    --line: #2b313b;
-    --text: #edeff2;
-    --muted: #8a93a3;
+    color-scheme: dark;
+    --bg: #0a0b0f;
+    --surface: rgba(24,26,34,.55);
+    --surface-2: #171922;
+    --surface-3: #1b1e28;
+    --line: rgba(255,255,255,.12);
+    --line-soft: rgba(255,255,255,.08);
+    --text: #eef0f5;
+    --muted: #9aa0af;
+    --muted-2: #6b7180;
     --amber: #ffb020;
-    --cyan: #29d3c6;
-    --magenta: #ff4d6a;
-    --brand-red: #e2241b;
-    --green: #6ee787;
+    --cyan: #4f8cff;
+    --magenta: #ff1f44;
+    --brand-red: #e10600;
+    --green: #3ddc84;
+    --violet: #a259ff;
+    --glass-hi: rgba(255,255,255,.06);
+    --glass-bd: rgba(255,255,255,.12);
+    --glass-sh: 0 10px 34px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10);
     --mono: 'JetBrains Mono', monospace;
-    --display: 'Barlow Condensed', sans-serif;
-    --body: 'Inter', sans-serif;
+    --display: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --body: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
   body{
-    background:var(--bg);
+    background:
+      radial-gradient(1200px 600px at 85% -10%, rgba(225,6,0,.16), transparent 60%),
+      radial-gradient(900px 520px at 0% 0%, rgba(255,31,68,.10), transparent 55%),
+      var(--bg);
     color:var(--text);
     font-family:var(--body);
     min-height:100vh;
     -webkit-font-smoothing:antialiased;
   }
-  ::selection{ background:var(--amber); color:#14171c; }
+  ::selection{ background:var(--brand-red); color:#fff; }
 
-  /* ---------- LED strip header ---------- */
+  /* ---------- Top strip ---------- */
   .led-strip{
-    display:flex; gap:6px; align-items:center; padding:10px 20px;
-    background:#0e1014; border-bottom:1px solid var(--line);
+    height:4px; width:100%; display:flex; position:sticky; top:0; z-index:50; padding:0;
+    background:none; border-bottom:none;
   }
-  .led-dot{
-    width:8px; height:8px; border-radius:50%;
-    background:#333; box-shadow:0 0 0 rgba(0,0,0,0);
-    animation: pulse 3.2s ease-in-out infinite;
-  }
-  .led-dot:nth-child(1){ background:var(--amber); animation-delay:0s; }
-  .led-dot:nth-child(2){ background:var(--magenta); animation-delay:.25s; }
-  .led-dot:nth-child(3){ background:var(--cyan); animation-delay:.5s; }
-  .led-dot:nth-child(4){ background:var(--green); animation-delay:.75s; }
-  .led-dot:nth-child(5){ background:var(--amber); animation-delay:1s; }
-  .led-dot:nth-child(6){ background:var(--cyan); animation-delay:1.25s; }
-  @keyframes pulse{
-    0%,100%{ opacity:.25; box-shadow:0 0 0 rgba(255,255,255,0); }
-    50%{ opacity:1; box-shadow:0 0 8px currentColor; }
-  }
-  .led-strip .period{
-    margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted);
-    letter-spacing:.05em;
-  }
-  @media (prefers-reduced-motion: reduce){ .led-dot{ animation:none; opacity:.8; } }
+  .led-dot{ flex:1; border-radius:0; width:auto; height:4px; animation:none; box-shadow:none; }
+  .led-dot:nth-child(1){ background:var(--brand-red); }
+  .led-dot:nth-child(2){ background:var(--amber); }
+  .led-dot:nth-child(3){ background:#e9ecf5; }
+  .led-dot:nth-child(4){ background:var(--cyan); }
+  .led-dot:nth-child(5){ background:var(--brand-red); }
+  .led-dot:nth-child(6){ background:var(--amber); }
+  .led-strip .period{ display:none; }
 
   header.top{
-    padding:18px 20px 16px; border-bottom:1px solid var(--line);
-    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
-    background: radial-gradient(ellipse 900px 200px at 0% 0%, rgba(255,176,32,.06), transparent 70%);
-    position:relative;
+    padding:14px 22px; border-bottom:1px solid var(--line-soft);
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+    background:none; position:relative;
   }
-  header.top::after{
-    content:''; position:absolute; left:0; right:0; bottom:-1px; height:1px;
-    background:linear-gradient(90deg, var(--brand-red) 0 8%, var(--amber) 8% 16%, transparent 16%);
-    opacity:.7;
-  }
+  header.top::after{ content:none; }
   .brand{ display:flex; align-items:center; gap:14px; }
-  .brand-mark{ width:46px; height:46px; flex-shrink:0; color:var(--amber); filter:drop-shadow(0 0 10px rgba(255,176,32,.25)); }
+  .brand-mark{ width:44px; height:44px; flex-shrink:0; color:var(--brand-red); filter:drop-shadow(0 0 10px rgba(225,6,0,.35)); }
   .brand-name{
-    font-family:var(--display); font-weight:800; font-size:26px; line-height:1;
-    letter-spacing:.01em; text-transform:uppercase; color:var(--text);
+    font-family:var(--display); font-weight:800; font-size:20px; line-height:1;
+    letter-spacing:-.4px; text-transform:uppercase; color:var(--text);
   }
-  .brand-name b{ color:var(--amber); font-weight:800; }
+  .brand-name b{ color:var(--brand-red); font-weight:800; }
   .brand-name .produtora{
-    display:block; font-family:var(--body); font-weight:600; font-size:10px; letter-spacing:.32em;
+    display:block; font-family:var(--body); font-weight:600; font-size:10px; letter-spacing:.28em;
     color:var(--muted); text-transform:uppercase; margin-top:3px;
   }
   .brand-chips{ display:inline-flex; gap:3px; margin-left:6px; vertical-align:middle; }
   .brand-chips i{ width:6px; height:9px; display:inline-block; border-radius:1px; }
   .brand-divider{ width:1px; align-self:stretch; background:var(--line); margin:2px 4px; }
-  header.top .sub{ color:var(--muted); font-size:12.5px; }
+  header.top .sub{ color:var(--muted); font-size:12px; }
   header.top .spacer{ flex:1; min-width:20px; }
+  .period-chip{
+    display:flex; align-items:center; gap:8px; font-size:12px; color:var(--muted);
+    background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:20px; padding:6px 12px;
+  }
+  .period-chip .dot{ width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 8px rgba(61,220,132,.8); flex-shrink:0; }
   .mes-switcher{ display:flex; align-items:center; gap:8px; }
   .mes-switcher label{ font-family:var(--mono); font-size:10.5px; color:var(--muted); letter-spacing:.06em; }
   .mes-switcher select{
-    background:var(--surface); border:1px solid var(--line); color:var(--text);
-    padding:8px 10px; border-radius:6px; font-family:var(--mono); font-size:13px; font-weight:600;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:9px; font-family:var(--body); font-size:13px; font-weight:600;
   }
   @media (max-width:720px){ header.top{ flex-direction:column; align-items:flex-start; } header.top .spacer{ display:none; } }
 
   .alert-banner{
-    display:flex; align-items:center; gap:14px; background:rgba(255,77,106,.09);
-    border:1px solid rgba(255,77,106,.35); border-radius:10px; padding:14px 16px; margin-bottom:18px;
+    display:flex; align-items:center; gap:14px; background:rgba(255,31,68,.10);
+    border:1.5px solid rgba(255,31,68,.4); border-radius:12px; padding:14px 16px; margin-bottom:18px;
     font-size:13px; line-height:1.5;
   }
   .alert-banner .alert-icon{ font-size:20px; color:var(--magenta); flex-shrink:0; }
-  .alert-banner strong{ color:var(--text); }
+  .alert-banner strong{ color:#fff; }
   .alert-banner .btn{ flex-shrink:0; margin-left:auto; }
-  .alert-banner.info{ background:rgba(255,176,32,.08); border-color:rgba(255,176,32,.35); }
+  .alert-banner.info{ background:rgba(255,176,32,.10); border-color:rgba(255,176,32,.4); }
   .alert-banner.info .alert-icon{ color:var(--amber); }
   .alert-banner .btn-row{ display:flex; gap:8px; flex-shrink:0; margin-left:auto; }
-  tr.row-pendente td{ background:rgba(255,77,106,.07); border-left:2px solid var(--magenta); }
+  tr.row-pendente td{ background:rgba(255,31,68,.08); border-left:2px solid var(--magenta); }
   tr.row-pendente td:first-child{ border-left:2px solid var(--magenta); }
-  tr.row-duplicada td{ background:rgba(255,184,0,.08); }
+  tr.row-duplicada td{ background:rgba(255,176,32,.08); }
   tr.row-duplicada td:first-child{ border-left:2px solid var(--amber); }
   tr.row-pendente.row-duplicada td:first-child{ border-left:2px solid var(--magenta); box-shadow:inset 3px 0 0 var(--amber); }
   .warn-dot{
@@ -123,53 +123,73 @@
 
   /* ---------- Tabs ---------- */
   nav.tabs{
-    display:flex; gap:4px; padding:0 20px; border-bottom:1px solid var(--line);
-    background:var(--bg); overflow-x:auto;
+    display:flex; gap:4px; padding:0 20px; border-bottom:1px solid var(--line-soft);
+    background:none; overflow-x:auto;
   }
   nav.tabs button{
     background:none; border:none; color:var(--muted); font-family:var(--display);
-    font-size:15px; font-weight:700; letter-spacing:.03em; text-transform:uppercase;
-    padding:11px 13px 10px; cursor:pointer; border-bottom:3px solid transparent;
+    font-size:13px; font-weight:600; letter-spacing:0; text-transform:none;
+    padding:11px 16px 10px; cursor:pointer; border-bottom:2px solid transparent;
     white-space:nowrap; display:flex; align-items:center; gap:8px;
   }
-  nav.tabs button .badge{
-    font-family:var(--mono); font-size:10px; font-weight:700; color:var(--bg);
-    background:var(--muted); border-radius:4px; padding:2px 5px;
-  }
-  nav.tabs button.active{ color:var(--text); border-bottom-color:var(--amber); }
-  nav.tabs button.active .badge{ background:var(--amber); }
+  nav.tabs button .badge{ display:none; }
+  nav.tabs button.active{ color:var(--text); border-bottom-color:var(--brand-red); }
   nav.tabs button:hover{ color:var(--text); }
 
-  main{ padding:16px 20px 40px; max-width:1900px; }
+  /* ---------- Sub-tabs (dentro de um panel, ex: Cadastro) ---------- */
+  nav.subtabs{ display:flex; gap:6px; margin:6px 0 16px; border-bottom:none; flex-wrap:wrap; }
+  nav.subtabs button{
+    background:rgba(255,255,255,.05); border:1px solid var(--line); border-radius:9px;
+    color:var(--muted); font-family:var(--display); font-size:12.5px; font-weight:600;
+    letter-spacing:0; text-transform:none; padding:7px 13px; margin-right:0; cursor:pointer;
+  }
+  nav.subtabs button.active{
+    background:rgba(225,6,0,.14); color:var(--text); border-color:var(--brand-red);
+    box-shadow:var(--glass-sh);
+  }
+  nav.subtabs button:hover{ color:var(--text); }
+  .subpanel{ display:none; animation: fadein .2s ease; }
+  .subpanel.active{ display:block; }
+
+  main{ padding:20px 26px 60px; max-width:1900px; }
   section.panel{ display:none; animation: fadein .25s ease; }
   section.panel.active{ display:block; }
   @keyframes fadein{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;} }
 
   h2.section-title{
-    font-family:var(--display); font-size:20px; text-transform:uppercase;
-    letter-spacing:.02em; margin:0 0 3px; font-weight:700;
+    font-family:var(--display); font-size:19px; text-transform:none;
+    letter-spacing:-.3px; margin:0 0 4px; font-weight:800;
   }
   p.section-desc{ color:var(--muted); font-size:12.5px; margin:0 0 14px; max-width:760px; }
 
   /* ---------- KPI cards ---------- */
-  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:10px; margin-bottom:18px; }
+  .kpi-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:18px; }
   .kpi{
-    background:var(--surface); border:1px solid var(--line); border-radius:10px;
-    padding:12px 14px 11px; position:relative; overflow:hidden;
+    background:linear-gradient(180deg,var(--glass-hi) 0%,var(--surface) 100%);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-bd); border-top:1px solid rgba(255,255,255,.18);
+    border-radius:14px; box-shadow:var(--glass-sh);
+    padding:13px 15px 12px; position:relative; overflow:hidden;
   }
   .kpi::before{
-    content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent,var(--amber));
+    content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--accent,var(--brand-red));
   }
-  .kpi .label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; }
-  .kpi .value{ font-family:var(--mono); font-size:22px; font-weight:700; margin-top:4px; }
+  .kpi .label{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:1.1px; }
+  .kpi .value{ font-family:var(--mono); font-size:24px; font-weight:800; margin-top:6px; letter-spacing:-.5px; }
   .kpi .value small{ font-size:12px; color:var(--muted); font-weight:400; }
 
-  /* ---------- Bars ---------- */
-  .bar-block{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
-  .bar-block h3{ font-family:var(--display); font-size:15px; text-transform:uppercase; margin:0 0 10px; letter-spacing:.02em; }
+  /* ---------- Bars / cards ---------- */
+  .bar-block{
+    background:linear-gradient(180deg,var(--glass-hi) 0%,var(--surface) 100%);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-bd); border-top:1px solid rgba(255,255,255,.18);
+    border-radius:14px; box-shadow:var(--glass-sh);
+    padding:15px 17px; margin-bottom:14px;
+  }
+  .bar-block h3{ font-family:var(--display); font-size:14px; text-transform:none; margin:0 0 10px; letter-spacing:0; font-weight:700; }
   .bar-row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; font-size:12.5px; }
   .bar-row .bar-label{ width:150px; flex-shrink:0; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .bar-row .bar-track{ flex:1; background:var(--surface-2); border-radius:4px; height:10px; overflow:hidden; }
+  .bar-row .bar-track{ flex:1; background:rgba(255,255,255,.06); border-radius:4px; height:10px; overflow:hidden; }
   .bar-row .bar-fill{ height:100%; border-radius:4px; }
   .bar-row .bar-val{ font-family:var(--mono); width:100px; text-align:right; flex-shrink:0; }
 
@@ -177,39 +197,48 @@
   @media (max-width:900px){ .two-col{ grid-template-columns:1fr; } }
 
   /* ---------- Toolbar ---------- */
-  .toolbar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:14px; }
   .toolbar input[type=text], .toolbar input[type=date], .toolbar select{
-    background:var(--surface); border:1px solid var(--line); color:var(--text);
-    padding:7px 9px; border-radius:6px; font-family:var(--body); font-size:13px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:9px; font-family:var(--body); font-size:13px; outline:none;
   }
   .toolbar input[type=number]{
-    background:var(--surface); border:1px solid var(--line); color:var(--text);
-    padding:7px 9px; border-radius:6px; font-family:var(--mono); font-size:13px; width:80px;
+    background:rgba(255,255,255,.04); border:1px solid var(--line); color:var(--text);
+    padding:8px 10px; border-radius:9px; font-family:var(--mono); font-size:13px; width:80px; outline:none;
   }
+  input::placeholder{ color:var(--muted-2); }
+  select option{ background:var(--surface-2); color:var(--text); }
   .btn{
-    background:var(--surface-2); border:1px solid var(--line); color:var(--text);
-    padding:7px 12px; border-radius:6px; font-family:var(--body); font-weight:600; font-size:13px;
-    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+    background:rgba(255,255,255,.05); border:1px solid var(--line); color:var(--text);
+    padding:9px 15px; border-radius:10px; font-family:var(--body); font-weight:700; font-size:13px;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px; box-shadow:none;
   }
-  .btn:hover{ border-color:var(--amber); }
-  .btn.primary{ background:var(--amber); color:#14171c; border-color:var(--amber); }
-  .btn.primary:hover{ filter:brightness(1.08); }
-  .btn.ghost{ background:none; }
-  .btn.danger:hover{ border-color:var(--magenta); color:var(--magenta); }
+  .btn:hover{ border-color:var(--brand-red); }
+  .btn.primary{ background:var(--brand-red); color:#fff; border-color:var(--brand-red); box-shadow:0 6px 18px rgba(225,6,0,.4); }
+  .btn.primary:hover{ filter:brightness(1.1); }
+  .btn.ghost{ background:rgba(255,255,255,.05); }
+  .btn.danger{ color:var(--magenta); border-color:rgba(255,31,68,.35); }
+  .btn.danger:hover{ border-color:var(--magenta); color:var(--magenta); background:rgba(255,31,68,.1); }
   .spacer{ flex:1; }
   .save-indicator{ font-family:var(--mono); font-size:11px; color:var(--green); opacity:0; transition:opacity .3s; }
   .save-indicator.show{ opacity:1; }
 
   /* ---------- Table ---------- */
-  .table-wrap{ background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:auto; max-height:76vh; }
-  table{ border-collapse:separate; border-spacing:0; width:100%; font-size:13px; }
+  .table-wrap{
+    background:linear-gradient(180deg,var(--glass-hi) 0%,var(--surface) 100%);
+    -webkit-backdrop-filter:blur(20px) saturate(1.5); backdrop-filter:blur(20px) saturate(1.5);
+    border:1px solid var(--glass-bd); border-top:1px solid rgba(255,255,255,.18);
+    border-radius:14px; overflow:auto; max-height:76vh; box-shadow:var(--glass-sh);
+  }
+  table{ border-collapse:separate; border-spacing:0; width:100%; font-size:12.5px; }
   thead th{
-    position:sticky; top:0; background:var(--surface-2); text-align:left; padding:10px 12px;
-    font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.05em;
+    position:sticky; top:0; background:var(--surface-2); text-align:left; padding:9px 10px;
+    font-family:var(--body); font-size:10px; text-transform:uppercase; letter-spacing:.8px;
     color:var(--muted); border-bottom:1px solid var(--line); white-space:nowrap; z-index:1;
   }
-  tbody td{ padding:8px 12px; border-bottom:1px solid var(--line); white-space:nowrap; vertical-align:middle; }
-  tbody tr:hover{ background:var(--surface-2); }
+  tbody td{ padding:7px 10px; border-bottom:1px solid var(--line-soft); white-space:nowrap; vertical-align:middle; color:var(--text); }
+  tbody tr:nth-child(even) td{ background:rgba(255,255,255,.02); }
+  tbody tr:hover td{ background:rgba(255,255,255,.05); }
   tbody td.num{ font-family:var(--mono); text-align:right; }
   tbody tr.total-row td{ font-weight:700; background:var(--surface-2); position:sticky; bottom:0; }
   td input, td select{
@@ -218,7 +247,7 @@
     box-sizing:border-box; line-height:1.3;
   }
   td input:hover, td select:hover{ border-color:var(--line); }
-  td input:focus, td select:focus{ border-color:var(--amber); outline:none; background:var(--surface-2); }
+  td input:focus, td select:focus{ border-color:var(--brand-red); outline:none; background:rgba(255,255,255,.06); }
   td input.num-in{ font-family:var(--mono); text-align:right; }
 
   /* ---------- Cadastro: largura mínima por coluna p/ o nome caber inteiro ---------- */
@@ -256,11 +285,11 @@
   #tblFechamento .grp-l{ border-left:1px solid var(--line); }
   /* coluna Nome fixa ao rolar horizontalmente */
   #tblFechamento th:nth-child(1), #tblFechamento td:nth-child(1){
-    position:sticky; left:0; z-index:2; background:var(--surface);
+    position:sticky; left:0; z-index:2; background:var(--surface-3);
     box-shadow:1px 0 0 var(--line);
   }
-  #tblFechamento thead th:nth-child(1){ z-index:3; }
-  #tblFechamento tbody tr:nth-child(even) td:nth-child(1){ background:#1e2229; }
+  #tblFechamento thead th:nth-child(1){ z-index:3; background:var(--surface-2); }
+  #tblFechamento tbody tr:nth-child(even) td:nth-child(1){ background:#20232d; }
   #tblFechamento tbody tr:hover td:nth-child(1){ background:var(--surface-2); }
   #tblFechamento tbody tr.total-row td:nth-child(1){ background:var(--surface-2); }
   #tblFechamento td.num{ font-variant-numeric:tabular-nums; }
@@ -278,6 +307,7 @@
   #tblAnotacoes th:nth-child(5) input{ text-align:right; font-family:var(--mono); }
   #tblAnotacoes th:nth-child(6), #tblAnotacoes td:nth-child(6){ min-width:220px; }
   #tblAnotacoes th:nth-child(7), #tblAnotacoes td:nth-child(7){ min-width:96px; text-align:center; }
+  #tblAnotacoes th:nth-child(8), #tblAnotacoes td:nth-child(8){ min-width:96px; text-align:center; }
 
   /* ---------- Ocorrências: largura mínima por coluna p/ não embolar ---------- */
   #tblOcorrencias th, #tblOcorrencias td{ padding-left:10px; padding-right:10px; }
@@ -300,17 +330,17 @@
   #tblOcorrencias th.sortable{ cursor:pointer; user-select:none; }
   #tblOcorrencias th.sortable:hover{ color:var(--text); }
   #tblOcorrencias th.sortable .arrow{ font-size:9px; margin-left:3px; opacity:.5; }
-  #tblOcorrencias th.sortable.active .arrow{ opacity:1; color:var(--amber); }
-  #tblOcorrencias tbody tr.row-selecionada td{ background:rgba(255,184,0,.10); }
+  #tblOcorrencias th.sortable.active .arrow{ opacity:1; color:var(--brand-red); }
+  #tblOcorrencias tbody tr.row-selecionada td{ background:rgba(255,176,32,.10); }
   .bulk-bar{
     display:flex; align-items:center; gap:8px; margin-bottom:10px; padding:9px 12px;
-    background:rgba(255,184,0,.08); border:1px solid var(--amber); border-radius:8px;
+    background:rgba(255,176,32,.10); border:1px solid var(--amber); border-radius:10px;
     font-size:13px; font-weight:600;
   }
 
   .tag{
-    display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600;
-    font-family:var(--mono);
+    display:inline-block; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:700;
+    font-family:var(--body);
   }
   .row-actions button{
     background:none; border:none; color:var(--muted); cursor:pointer; font-size:14px; padding:2px 4px;
@@ -320,32 +350,31 @@
   .empty-state{
     text-align:center; padding:50px 20px; color:var(--muted); font-size:13px;
   }
-  .empty-state .big{ font-family:var(--display); font-size:20px; color:var(--text); margin-bottom:6px; text-transform:uppercase; }
+  .empty-state .big{ font-family:var(--display); font-size:17px; color:var(--text); margin-bottom:6px; text-transform:none; font-weight:800; }
 
   .legend{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:16px; }
-  .legend span{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); font-family:var(--mono); }
+  .legend span{ display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); font-family:var(--body); }
   .legend i{ width:9px; height:9px; border-radius:2px; display:inline-block; }
 
   .footnote{ color:var(--muted); font-size:11.5px; margin-top:10px; }
   .drop-zone{
-    border:1.5px dashed var(--line); border-radius:10px; padding:22px; text-align:center;
+    border:1.5px dashed var(--line); border-radius:12px; padding:22px; text-align:center;
     color:var(--muted); font-size:13px; margin-bottom:18px; cursor:pointer; transition:border-color .2s, color .2s;
   }
-  .drop-zone:hover, .drop-zone.drag{ border-color:var(--amber); color:var(--text); }
-  .drop-zone strong{ color:var(--amber); }
+  .drop-zone:hover, .drop-zone.drag{ border-color:var(--brand-red); color:var(--text); }
+  .drop-zone strong{ color:var(--brand-red); }
 
   ::-webkit-scrollbar{ width:10px; height:10px; }
   ::-webkit-scrollbar-track{ background:var(--bg); }
   ::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
-  ::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
+  ::-webkit-scrollbar-thumb:hover{ background:var(--muted-2); }
 </style>
 </head>
 <body>
 
 <div class="led-strip">
   <div class="led-dot"></div><div class="led-dot"></div><div class="led-dot"></div>
-  <div class="led-dot"></div><div class="led-dot"></div><div class="led-dot"></div>
-  <div class="period" id="periodoLabel">CARREGANDO…</div>
+  <div class="led-dot"></div>
 </div>
 
 <header class="top">
@@ -365,6 +394,7 @@
   <div class="brand-divider"></div>
   <div class="sub">Controle de Lançamentos para Folha de Pagamento</div>
   <div class="spacer"></div>
+  <div class="period-chip"><span class="dot"></span><span id="periodoLabel">CARREGANDO…</span></div>
   <div class="mes-switcher">
     <label>MÊS</label>
     <select id="selMes"></select>
@@ -375,61 +405,67 @@
 </header>
 
 <nav class="tabs">
-  <button class="tab-btn active" data-tab="dashboard"><span class="badge">DB</span>Dashboard</button>
-  <button class="tab-btn" data-tab="cadastro"><span class="badge">CA</span>Cadastro</button>
+  <button class="tab-btn active" data-tab="cadastro"><span class="badge">CA</span>Cadastro</button>
   <button class="tab-btn" data-tab="ocorrencias"><span class="badge">OC</span>Ocorrências</button>
-  <button class="tab-btn" data-tab="motivos"><span class="badge">MO</span>Motivos</button>
   <button class="tab-btn" data-tab="fechamento"><span class="badge">FE</span>Fechamento</button>
   <button class="tab-btn" data-tab="anotacoes"><span class="badge">AN</span>Anotações Financeiras</button>
   <button class="tab-btn" data-tab="sincronizar"><span class="badge">SY</span>Sincronizar</button>
 </nav>
 
+<div id="avisosGlobais" style="padding:12px 20px 0;">
+  <div id="lembreteBackup" style="display:none;"></div>
+  <div id="alertaFaltas" style="display:none;"></div>
+</div>
+
 <main>
 
-  <!-- ===================== DASHBOARD ===================== -->
-  <section class="panel active" id="panel-dashboard">
-    <h2 class="section-title">Dashboard do mês</h2>
-    <p class="section-desc">Consolidado de VA, VT e ocorrências a partir do Cadastro e das Ocorrências lançadas.</p>
-    <div id="lembreteBackup" style="display:none;"></div>
-    <div id="alertaFaltas" style="display:none;"></div>
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="two-col">
-      <div class="bar-block">
-        <h3>Total VA + VT por empresa</h3>
-        <div id="barEmpresa"></div>
-      </div>
-      <div class="bar-block">
-        <h3>Colaboradores por função</h3>
-        <div id="barFuncao"></div>
-      </div>
-    </div>
-    <div class="bar-block">
-      <h3>Ocorrências por motivo (mês)</h3>
-      <div id="barMotivo"></div>
-    </div>
-  </section>
-
   <!-- ===================== CADASTRO ===================== -->
-  <section class="panel" id="panel-cadastro">
+  <section class="panel active" id="panel-cadastro">
     <h2 class="section-title">Cadastro</h2>
-    <p class="section-desc">Colaboradores, empresa, funcao e valores diarios de VA/VT. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
-    <div class="toolbar">
-      <input type="text" id="cadBusca" placeholder="Buscar por nome…">
-      <select id="cadFiltroEmpresa"><option value="">Todas empresas</option></select>
-      <select id="cadFiltroFuncao"><option value="">Todas funcoes</option></select>
-      <div class="spacer"></div>
-      <span class="save-indicator" id="cadSaveInd">salvo</span>
-      <button class="btn ghost" id="btnExportCadXlsx" title="Baixar cadastro em Excel">⬇ Excel</button>
-      <button class="btn ghost" id="btnExportCadPdf" title="Baixar cadastro em PDF">⬇ PDF</button>
-      <button class="btn primary" id="btnAddCadastro">+ Colaborador</button>
+    <nav class="subtabs">
+      <button class="subtab-btn active" data-subtab="colaboradores">Colaboradores</button>
+      <button class="subtab-btn" data-subtab="motivos">Motivos</button>
+    </nav>
+
+    <div class="subpanel active" id="subpanel-colaboradores">
+      <p class="section-desc">Colaboradores, empresa, funcao e valores diarios de VA/VT. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
+      <div class="toolbar">
+        <input type="text" id="cadBusca" placeholder="Buscar por nome…">
+        <select id="cadFiltroEmpresa"><option value="">Todas empresas</option></select>
+        <select id="cadFiltroFuncao"><option value="">Todas funcoes</option></select>
+        <div class="spacer"></div>
+        <span class="save-indicator" id="cadSaveInd">salvo</span>
+        <button class="btn ghost" id="btnExportCadXlsx" title="Baixar cadastro em Excel">⬇ Excel</button>
+        <button class="btn ghost" id="btnExportCadPdf" title="Baixar cadastro em PDF">⬇ PDF</button>
+        <button class="btn primary" id="btnAddCadastro">+ Colaborador</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tblCadastro">
+          <thead><tr>
+            <th>Nome</th><th>Empresa</th><th>Funcao</th><th>VA diario</th><th>VT diario</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
-    <div class="table-wrap">
-      <table id="tblCadastro">
-        <thead><tr>
-          <th>Nome</th><th>Empresa</th><th>Funcao</th><th>VA diario</th><th>VT diario</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
+
+    <div class="subpanel" id="subpanel-motivos">
+      <p class="section-desc">Catálogo de motivos do sistema de ponto. Aqui você define quais motivos descontam VA e/ou VT no fechamento — mude o que precisar, é usado em todos os meses. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
+      <div class="kpi-grid" id="moKpiGrid" style="margin-bottom:16px;"></div>
+      <div class="toolbar">
+        <input type="text" id="moBusca" placeholder="Buscar motivo…">
+        <div class="spacer"></div>
+        <span class="save-indicator" id="moSaveInd">salvo</span>
+        <button class="btn primary" id="btnAddMotivo">+ Motivo</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tblMotivos">
+          <thead><tr>
+            <th>Motivo (sistema de ponto)</th><th>Motivo na folha</th><th>Desconta VA</th><th>Desconta VT</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
     </div>
   </section>
 
@@ -477,31 +513,12 @@
     </div>
   </section>
 
-  <!-- ===================== MOTIVOS ===================== -->
-  <section class="panel" id="panel-motivos">
-    <h2 class="section-title">Motivos</h2>
-    <p class="section-desc">Catálogo de motivos do sistema de ponto. Aqui você define quais motivos descontam VA e/ou VT no fechamento — mude o que precisar, é usado em todos os meses. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
-    <div class="kpi-grid" id="moKpiGrid" style="margin-bottom:16px;"></div>
-    <div class="toolbar">
-      <input type="text" id="moBusca" placeholder="Buscar motivo…">
-      <div class="spacer"></div>
-      <span class="save-indicator" id="moSaveInd">salvo</span>
-      <button class="btn primary" id="btnAddMotivo">+ Motivo</button>
-    </div>
-    <div class="table-wrap">
-      <table id="tblMotivos">
-        <thead><tr>
-          <th>Motivo (sistema de ponto)</th><th>Motivo na folha</th><th>Desconta VA</th><th>Desconta VT</th><th></th>
-        </tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </section>
-
   <!-- ===================== FECHAMENTO ===================== -->
   <section class="panel" id="panel-fechamento">
     <h2 class="section-title">Fechamento</h2>
     <p class="section-desc">Recalcula automaticamente a partir do Cadastro + Ocorrências, replicando a lógica da planilha original.</p>
+    <div id="statusMesFechado"></div>
+    <div id="alertaAnotacoesFechamento" style="display:none;"></div>
     <div class="bar-block" id="diasUteisPorEmpresaBlock">
       <h3>Dias úteis por empresa</h3>
       <p class="footnote" style="margin-top:-6px;">Cada empresa pode ter uma dinâmica diferente de dias úteis no mês. Deixe em branco para usar o padrão do mês.</p>
@@ -585,6 +602,9 @@
       <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
         <input type="checkbox" id="anSoNaoConferidos" style="width:auto;"> só pendentes de conferência
       </label>
+      <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+        <input type="checkbox" id="anSoNaoEnviados" style="width:auto;"> só não enviados pra contabilidade
+      </label>
       <div class="spacer"></div>
       <span class="save-indicator" id="anSaveInd">salvo</span>
       <button class="btn" id="btnExportAnXlsx">Exportar XLSX</button>
@@ -594,7 +614,7 @@
     <div class="table-wrap">
       <table id="tblAnotacoes">
         <thead><tr>
-          <th>Data</th><th>Colaborador</th><th>Tipo</th><th>Natureza</th><th>Valor R$</th><th>Observação</th><th>Conferido</th><th></th>
+          <th>Data</th><th>Colaborador</th><th>Tipo</th><th>Natureza</th><th>Valor R$</th><th>Observação</th><th>Conferido</th><th>Enviado</th><th></th>
         </tr></thead>
         <tbody></tbody>
         <tfoot></tfoot>
@@ -631,6 +651,21 @@
       <h3>Todos os meses guardados</h3>
       <div id="listaMeses" style="font-family:var(--mono); font-size:12.5px; line-height:2;"></div>
     </div>
+    <div class="bar-block">
+      <h3>Backups automáticos</h3>
+      <p class="footnote" style="margin-top:-6px;">Além do salvamento contínuo no Supabase, o painel guarda uma cópia completa por dia (últimos 7 dias) — pra ter pra onde voltar se algo for editado errado.</p>
+      <div id="listaSnapshots" style="font-family:var(--mono); font-size:12.5px; line-height:2;"></div>
+    </div>
+    <div class="bar-block">
+      <h3>Histórico de alterações — <span id="logMesAtualNome"></span></h3>
+      <p class="footnote" style="margin-top:-6px;">Registro de mudanças em campos importantes (VA/VT/empresa no Cadastro, dias/motivo nas Ocorrências, valor/tipo nas Anotações) deste mês. Mantém os 300 mais recentes.</p>
+      <div class="table-wrap" style="max-height:320px;">
+        <table id="tblLogAlteracoes">
+          <thead><tr><th>Quando</th><th>Área</th><th>Referência</th><th>Campo</th><th>De</th><th>Para</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
 </main>
@@ -645,40 +680,93 @@
 // =====================================================================
 
 // ---------------------------------------------------------------
-// Armazenamento: usa o storage do Claude quando disponível (dentro do
-// chat); fora daqui (arquivo aberto direto no Chrome, favoritado etc.)
-// usa o localStorage do próprio navegador — assim o painel funciona
-// 100% sozinho, sem depender de internet ou do Claude.
+// Armazenamento: grava direto no Supabase (banco na nuvem), assim
+// o painel funciona em qualquer computador/navegador com os mesmos
+// dados, sem depender do storage local do Claude nem do navegador.
+//
+// >>> PREENCHA AQUI com a URL e a chave "anon public" do seu projeto
+//     Supabase (Project Settings → API). <<<
 // ---------------------------------------------------------------
-if (!window.storage){
-  const PREFIXO = 'iled-folha:';
-  window.storage = {
-    async get(key, shared){
-      try{
-        const raw = localStorage.getItem(PREFIXO + key);
-        if (raw === null) throw new Error('not found');
-        return { key, value: raw, shared: !!shared };
-      }catch(e){ throw e; }
-    },
-    async set(key, value, shared){
-      localStorage.setItem(PREFIXO + key, value);
-      return { key, value, shared: !!shared };
-    },
-    async delete(key, shared){
-      localStorage.removeItem(PREFIXO + key);
-      return { key, deleted:true, shared: !!shared };
-    },
-    async list(prefix, shared){
-      const p = PREFIXO + (prefix||'');
-      const keys = [];
-      for (let i=0;i<localStorage.length;i++){
-        const k = localStorage.key(i);
-        if (k && k.startsWith(p)) keys.push(k.slice(PREFIXO.length));
-      }
-      return { keys, prefix: prefix||'', shared: !!shared };
+const SUPABASE_URL = 'https://parsuctecovbmaadplhu.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_-RoPFMVEsCcnqOcIf7iL8A_C06uwFAE';
+
+const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const PREFIXO_LOCAL_FALLBACK = 'iled-folha:'; // só usado se o Supabase falhar (ex: sem internet)
+
+window.storage = {
+  async get(key, shared){
+    shared = !!shared;
+    const { data, error } = await _sb
+      .from('kv_store')
+      .select('value, updated_at')
+      .eq('storage_key', key)
+      .eq('shared', shared)
+      .maybeSingle();
+    if (error){
+      const raw = localStorage.getItem(PREFIXO_LOCAL_FALLBACK + key);
+      if (raw === null) throw error;
+      return { key, value: raw, shared, updatedAt: null };
     }
-  };
-}
+    if (!data) throw new Error('not found');
+    return { key, value: data.value, shared, updatedAt: data.updated_at };
+  },
+  // expectedUpdatedAt (opcional): quando informado, só grava se o
+  // registro no banco ainda estiver exatamente nesse "updated_at" —
+  // ou seja, se ninguém mais escreveu nele desde a última leitura
+  // desta aba. Se alguém escreveu, lança {conflict:true} em vez de
+  // sobrescrever às cegas (é a trava contra aba antiga por cima).
+  async set(key, value, shared, expectedUpdatedAt){
+    shared = !!shared;
+    const novoTimestamp = new Date().toISOString();
+    if (expectedUpdatedAt){
+      const { data, error } = await _sb
+        .from('kv_store')
+        .update({ value, updated_at: novoTimestamp })
+        .eq('storage_key', key)
+        .eq('shared', shared)
+        .eq('updated_at', expectedUpdatedAt)
+        .select('storage_key');
+      if (error){
+        localStorage.setItem(PREFIXO_LOCAL_FALLBACK + key, value);
+        throw error;
+      }
+      if (!data || data.length === 0){
+        const err = new Error('conflict'); err.conflict = true; throw err;
+      }
+      return { key, value, shared, updatedAt: novoTimestamp };
+    }
+    const { error } = await _sb
+      .from('kv_store')
+      .upsert({ storage_key: key, shared, value, updated_at: novoTimestamp }, { onConflict: 'storage_key,shared' });
+    if (error){
+      localStorage.setItem(PREFIXO_LOCAL_FALLBACK + key, value);
+      throw error;
+    }
+    return { key, value, shared, updatedAt: novoTimestamp };
+  },
+  async delete(key, shared){
+    shared = !!shared;
+    const { error } = await _sb
+      .from('kv_store')
+      .delete()
+      .eq('storage_key', key)
+      .eq('shared', shared);
+    if (error) throw error;
+    localStorage.removeItem(PREFIXO_LOCAL_FALLBACK + key);
+    return { key, deleted: true, shared };
+  },
+  async list(prefix, shared){
+    shared = !!shared;
+    prefix = prefix || '';
+    const { data, error } = await _sb
+      .from('kv_store')
+      .select('storage_key')
+      .eq('shared', shared)
+      .like('storage_key', `${prefix}%`);
+    if (error) throw error;
+    return { keys: (data || []).map(r => r.storage_key), prefix, shared };
+  }
+};
 
 const MES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 
@@ -711,6 +799,9 @@ let diasUteisPorEmpresa = {}; // override por empresa — cada empresa pode ter 
 let baseInfo = { fonte: 'Base original enviada', atualizadoEm: null };
 let catalogoMotivos = [];       // global, compartilhado entre todos os meses
 let lancamentosFinanceiros = []; // anotações de desconto/pagamento do mês ativo — não entra no cálculo do Fechamento
+let mesFechado = false;    // trava geral do mês — impede edição em Cadastro/Ocorrências/Anotações depois de enviado pra contabilidade
+let mesFechadoEm = null;   // timestamp (ISO) de quando o mês foi fechado
+let logAlteracoes = [];    // histórico de mudanças em campos-chave do mês ativo (mais recente primeiro)
 let catalogoTiposFinanceiros = []; // global, compartilhado entre todos os meses
 const CATALOGO_FINANCEIRO_PADRAO = [
   {tipo:'MULTA DE TRÂNSITO', natureza:'desconto', travado:false},
@@ -854,7 +945,15 @@ function nomeCanonico(motivoRaw){
 const chaveStorageMes = chave => `mes:${chave}`;
 
 async function salvarIndiceMeses(){
-  try{ await window.storage.set('meses-indice', JSON.stringify(mesesDisponiveis), false); }
+  try{
+    // Sempre mescla com o que já está no banco antes de gravar — nunca
+    // sobrescreve com só o que esta aba conhece, senão um mês criado em
+    // outro lugar some da lista (foi o que aconteceu com setembro).
+    const doBanco = await carregarIndiceMeses();
+    const combinado = [...new Set([...(doBanco || []), ...mesesDisponiveis])].sort();
+    mesesDisponiveis = combinado;
+    await window.storage.set('meses-indice', JSON.stringify(combinado), false);
+  }
   catch(e){ console.error('Erro ao salvar índice de meses', e); }
 }
 async function carregarIndiceMeses(){
@@ -874,18 +973,85 @@ async function carregarMesAtivoPreferido(){
   }catch(e){}
   return null;
 }
+let mesUpdatedAtCarregado = null; // "carimbo" do mes: carregado por esta aba — usado pra travar contra sobrescrita por aba desatualizada
+let conflitoDetectado = false;    // true assim que uma tentativa de salvar é recusada por conflito — pausa o autosave até recarregar
+
 async function salvarDadosMes(chave){
+  if (conflitoDetectado) return false; // já em conflito — não tenta mais salvar até a página recarregar
   try{
-    await window.storage.set(chaveStorageMes(chave), JSON.stringify({ cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo }), false);
+    const r = await window.storage.set(
+      chaveStorageMes(chave),
+      JSON.stringify({ cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, mesFechado, mesFechadoEm, logAlteracoes }),
+      false,
+      mesUpdatedAtCarregado
+    );
+    mesUpdatedAtCarregado = r.updatedAt; // essa aba agora é a dona da versão mais nova
     return true;
-  }catch(e){ console.error('Erro ao salvar mês', e); return false; }
+  }catch(e){
+    if (e && e.conflict){
+      conflitoDetectado = true;
+      mostrarAvisoConflito(chave);
+      return false;
+    }
+    console.error('Erro ao salvar mês', e);
+    return false;
+  }
 }
+
+function mostrarAvisoConflito(chave){
+  if (document.getElementById('avisoConflito')) return; // já mostrado
+  const div = document.createElement('div');
+  div.id = 'avisoConflito';
+  div.style.cssText = 'position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.75); display:flex; align-items:center; justify-content:center; padding:20px;';
+  div.innerHTML = `
+    <div style="max-width:480px; background:var(--surface-2); border:1.5px solid var(--magenta); border-radius:14px; padding:24px; box-shadow:var(--glass-sh);">
+      <div style="font-size:28px; margin-bottom:10px;">⚠️</div>
+      <h3 style="margin:0 0 10px; font-family:var(--display); font-size:17px;">Essa aba ficou desatualizada</h3>
+      <p style="color:var(--muted); font-size:13.5px; line-height:1.6; margin:0 0 18px;">
+        ${labelMes(chave)} foi alterado em outro lugar (outra aba, outro computador, ou essa mesma aba
+        ficou aberta por muito tempo em segundo plano) desde que essa tela foi carregada. Pra não
+        arriscar apagar o que foi salvo lá, essa aba <strong>parou de salvar automaticamente</strong>.
+      </p>
+      <p style="color:var(--muted); font-size:13.5px; line-height:1.6; margin:0 0 18px;">
+        Recarregue a página pra ver a versão mais recente. Se você tiver algo digitado aqui nessa aba
+        que ainda não apareceu na outra, anote à parte antes de recarregar, porque essa versão vai se perder.
+      </p>
+      <button class="btn primary" onclick="location.reload()">🔄 Recarregar agora</button>
+    </div>`;
+  document.body.appendChild(div);
+}
+
 async function carregarDadosMes(chave){
   try{
     const r = await window.storage.get(chaveStorageMes(chave), false);
-    if (r && r.value) return JSON.parse(r.value);
+    if (r && r.value){
+      const dados = JSON.parse(r.value);
+      dados._updatedAt = r.updatedAt;
+      return dados;
+    }
   }catch(e){}
   return null;
+}
+
+// ---------------------------------------------------------------
+// Mês fechado: trava geral pós-envio pra contabilidade, e log de
+// alterações em campos-chave (auditoria simples, por mês).
+// ---------------------------------------------------------------
+function mesEstaFechado(){ return mesFechado === true; }
+
+function avisoMesFechado(){
+  alert(`O mês ${labelMes(mesAtivo)} está fechado. Reabra em Fechamento (🔓 Reabrir mês) para editar.`);
+}
+
+function registrarLog(area, ref, campo, de, para){
+  if (String(de ?? '') === String(para ?? '')) return; // nada mudou de verdade
+  logAlteracoes.unshift({
+    ts: new Date().toISOString(),
+    usuario: 'Mirthes',
+    area, ref, campo,
+    de: de ?? '', para: para ?? '',
+  });
+  if (logAlteracoes.length > 300) logAlteracoes.length = 300; // mantém só os mais recentes
 }
 async function salvarCatalogoMotivos(){
   try{ await window.storage.set('catalogo-motivos', JSON.stringify(catalogoMotivos), false); return true; }
@@ -921,8 +1087,8 @@ let saveTimer = null;
 function autoSave(indicatorId){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async ()=>{
-    await salvarDadosMes(mesAtivo);
-    if (indicatorId) flashSave(indicatorId);
+    const ok = await salvarDadosMes(mesAtivo);
+    if (ok && indicatorId) flashSave(indicatorId);
   }, 500);
 }
 let saveTimerMotivos = null;
@@ -1031,18 +1197,137 @@ async function marcarBackupFeito(){
   if (el){ el.style.display = 'none'; el.innerHTML = ''; }
 }
 
-async function exportarBackupCompleto(){
-  await salvarTudo(false); // garante que o que está em memória foi persistido antes do backup
+async function montarPacoteBackup(){
   const pacote = { geradoEm: new Date().toISOString(), mesesDisponiveis, catalogoMotivos, catalogoTiposFinanceiros, dados: {} };
   for (const chave of mesesDisponiveis){
     pacote.dados[chave] = (chave === mesAtivo)
-      ? { cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo }
+      ? { cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, mesFechado, mesFechadoEm, logAlteracoes }
       : (await carregarDadosMes(chave)) || null;
   }
+  return pacote;
+}
+
+async function exportarBackupCompleto(){
+  await salvarTudo(false); // garante que o que está em memória foi persistido antes do backup
+  const pacote = await montarPacoteBackup();
   const blob = new Blob([JSON.stringify(pacote, null, 2)], {type:'application/json'});
   const hoje = new Date().toISOString().slice(0,10);
   baixar(blob, `backup-iled-folha_${hoje}.json`);
   await marcarBackupFeito();
+}
+
+// ---------------------------------------------------------------
+// Backups automáticos diários — guardados no próprio Supabase, sem
+// depender de lembrar de clicar em nada. Mantém só os últimos 7 dias.
+// ---------------------------------------------------------------
+const PREFIXO_SNAPSHOT = 'snapshot-auto:';
+const MAX_SNAPSHOTS = 7;
+
+async function verificarSnapshotDiario(){
+  try{
+    const hoje = new Date().toISOString().slice(0,10);
+    let ultimo = null;
+    try{ const r = await window.storage.get('ultimo-snapshot-dia', false); ultimo = r?.value || null; }catch(e){}
+    if (ultimo === hoje) return; // já fez hoje
+    await salvarTudo(false);
+    const pacote = await montarPacoteBackup();
+    await window.storage.set(PREFIXO_SNAPSHOT + hoje, JSON.stringify(pacote), false);
+    await window.storage.set('ultimo-snapshot-dia', hoje, false);
+    await limparSnapshotsAntigos();
+  }catch(e){ console.error('Erro ao criar snapshot automático', e); }
+}
+
+async function listarSnapshots(){
+  try{
+    const r = await window.storage.list(PREFIXO_SNAPSHOT, false);
+    return (r?.keys || []).sort().reverse(); // AAAA-MM-DD ordena certo como texto
+  }catch(e){ return []; }
+}
+
+async function limparSnapshotsAntigos(){
+  const chaves = await listarSnapshots();
+  for (const k of chaves.slice(MAX_SNAPSHOTS)){
+    try{ await window.storage.delete(k, false); }catch(e){}
+  }
+}
+
+async function restaurarPacoteBackup(pacote){
+  mesesDisponiveis = pacote.mesesDisponiveis || mesesDisponiveis;
+  catalogoMotivos = pacote.catalogoMotivos || catalogoMotivos;
+  catalogoTiposFinanceiros = pacote.catalogoTiposFinanceiros || catalogoTiposFinanceiros;
+  await salvarIndiceMeses();
+  await salvarCatalogoMotivos();
+  await salvarCatalogoFinanceiro();
+  for (const chave of mesesDisponiveis){
+    const dadosMes = pacote.dados?.[chave];
+    if (dadosMes) await window.storage.set(chaveStorageMes(chave), JSON.stringify(dadosMes), false);
+  }
+  mesAtivo = mesesDisponiveis[mesesDisponiveis.length-1] || mesAtivo;
+  await salvarMesAtivoPreferido();
+  popularSeletorMes();
+  await abrirMes(mesAtivo);
+}
+
+async function renderListaSnapshots(){
+  const el = document.getElementById('listaSnapshots');
+  if (!el) return;
+  const chaves = await listarSnapshots();
+  if (chaves.length === 0){
+    el.innerHTML = '<span class="footnote">Nenhum backup automático ainda — o primeiro é criado ao abrir o painel hoje.</span>';
+    return;
+  }
+  el.innerHTML = chaves.map(k => {
+    const data = k.replace(PREFIXO_SNAPSHOT, '');
+    return `<div style="display:flex; align-items:center; gap:10px;">
+      <span>📦 ${data}</span>
+      <button class="btn ghost" data-baixar-snap="${k}" style="padding:3px 9px; font-size:11px;">⬇ Baixar</button>
+      <button class="btn ghost" data-restaurar-snap="${k}" style="padding:3px 9px; font-size:11px;">↺ Restaurar</button>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-baixar-snap]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try{
+        const r = await window.storage.get(btn.dataset.baixarSnap, false);
+        const blob = new Blob([r.value], {type:'application/json'});
+        baixar(blob, `${btn.dataset.baixarSnap.replace(':','_')}.json`);
+      }catch(e){ alert('Não consegui baixar esse backup.'); }
+    });
+  });
+  el.querySelectorAll('[data-restaurar-snap]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const k = btn.dataset.restaurarSnap;
+      const data = k.replace(PREFIXO_SNAPSHOT, '');
+      if (!confirm(`Restaurar o backup de ${data}? Isso substitui TODOS os meses pelos dados salvos naquele dia. Não pode ser desfeito.`)) return;
+      try{
+        const r = await window.storage.get(k, false);
+        await restaurarPacoteBackup(JSON.parse(r.value));
+        alert(`Backup de ${data} restaurado.`);
+      }catch(e){ alert('Não consegui restaurar esse backup.'); }
+    });
+  });
+}
+
+// ---------------------------------------------------------------
+// Histórico de alterações do mês ativo
+// ---------------------------------------------------------------
+function renderHistoricoAlteracoes(){
+  const nomeEl = document.getElementById('logMesAtualNome');
+  if (nomeEl) nomeEl.textContent = labelMes(mesAtivo);
+  const tbody = document.querySelector('#tblLogAlteracoes tbody');
+  if (!tbody) return;
+  if (!logAlteracoes || logAlteracoes.length === 0){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">Nenhuma alteração registrada em ${labelMes(mesAtivo)} ainda.</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = logAlteracoes.slice(0, 100).map(l => `
+    <tr>
+      <td>${new Date(l.ts).toLocaleString('pt-BR')}</td>
+      <td>${escAttr(l.area)}</td>
+      <td>${escAttr(l.ref)}</td>
+      <td>${escAttr(l.campo)}</td>
+      <td>${escAttr(l.de)}</td>
+      <td>${escAttr(l.para)}</td>
+    </tr>`).join('');
 }
 
 // ---------------------------------------------------------------
@@ -1051,9 +1336,9 @@ async function exportarBackupCompleto(){
 async function abrirMes(chave){
   mesAtivo = chave;
   let dados = await carregarDadosMes(chave);
-  if (!dados){
-    dados = { cadastro: [], ocorrencias: [], lancamentosFinanceiros: [], diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {}, baseInfo: { fonte:'Mês criado em branco', atualizadoEm: new Date().toISOString() } };
-    await salvarDadosMes(chave);
+  const eraNovo = !dados;
+  if (eraNovo){
+    dados = { cadastro: [], ocorrencias: [], lancamentosFinanceiros: [], diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {}, baseInfo: { fonte:'Mês criado em branco', atualizadoEm: new Date().toISOString() }, mesFechado:false, mesFechadoEm:null, logAlteracoes:[] };
   }
   cadastro = dados.cadastro || [];
   ocorrencias = dados.ocorrencias || [];
@@ -1061,6 +1346,12 @@ async function abrirMes(chave){
   diasUteisMes = dados.diasUteisMes ?? diasUteisDoMes(chave);
   diasUteisPorEmpresa = dados.diasUteisPorEmpresa || {};
   baseInfo = dados.baseInfo || { fonte:'—', atualizadoEm:null };
+  mesFechado = dados.mesFechado === true;
+  mesFechadoEm = dados.mesFechadoEm || null;
+  logAlteracoes = dados.logAlteracoes || [];
+  mesUpdatedAtCarregado = dados._updatedAt || null;
+  conflitoDetectado = false;
+  if (eraNovo) await salvarDadosMes(chave); // só agora, com os globais já certos pro mês novo
   await salvarMesAtivoPreferido();
   renderTudo();
 }
@@ -1090,6 +1381,11 @@ async function criarNovoMes(){
   diasUteisMes = diasUteisDoMes(chave);
   diasUteisPorEmpresa = {};
   baseInfo = { fonte: `Criado a partir do cadastro de ${labelMes(cadastroOrigem)}`, atualizadoEm: new Date().toISOString() };
+  mesFechado = false;
+  mesFechadoEm = null;
+  logAlteracoes = [];
+  mesUpdatedAtCarregado = null;
+  conflitoDetectado = false;
   await salvarDadosMes(chave);
   await salvarMesAtivoPreferido();
   popularSeletorMes();
@@ -1156,14 +1452,10 @@ function faltasPendentesRevisao(){
 }
 
 // ---------------------------------------------------------------
-// Render: DASHBOARD
+// Avisos gerais (visíveis em qualquer aba, no topo)
 // ---------------------------------------------------------------
 function renderDashboard(){
-  const fechamento = calcularFechamento();
   const totalColab = cadastro.length;
-  const totalVA = fechamento.reduce((s,f)=>s+f.valorVA,0);
-  const totalVT = fechamento.reduce((s,f)=>s+f.valorVT,0);
-  const totalGeral = totalVA + totalVT;
   const totalOcorr = ocorrencias.length;
 
   const pendentes = faltasPendentesRevisao();
@@ -1188,55 +1480,6 @@ function renderDashboard(){
     alerta.style.display = 'none';
     alerta.innerHTML = '';
   }
-
-  const kpis = [
-    {label:'Colaboradores', value: totalColab, accent:'var(--amber)'},
-    {label:'Total VA', value: fmtBRL(totalVA), accent:'var(--cyan)'},
-    {label:'Total VT', value: fmtBRL(totalVT), accent:'var(--green)'},
-    {label:'Total geral (VA+VT)', value: fmtBRL(totalGeral), accent:'var(--magenta)'},
-    {label:'Ocorrências no mês', value: totalOcorr, accent:'var(--amber)'},
-  ];
-  document.getElementById('kpiGrid').innerHTML = kpis.map(k => `
-    <div class="kpi" style="--accent:${k.accent}">
-      <div class="label">${k.label}</div>
-      <div class="value">${k.value}</div>
-    </div>`).join('');
-
-  const porEmpresa = {};
-  fechamento.forEach(f => { porEmpresa[f.empresa] = (porEmpresa[f.empresa]||0) + f.total; });
-  const maxEmpresa = Math.max(...Object.values(porEmpresa), 1);
-  document.getElementById('barEmpresa').innerHTML = Object.entries(porEmpresa)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([nome,val]) => `
-      <div class="bar-row">
-        <div class="bar-label">${nome}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxEmpresa*100).toFixed(1)}%; background:${corEmpresa(nome)}"></div></div>
-        <div class="bar-val">${fmtBRL(val)}</div>
-      </div>`).join('') || '<div class="empty-state">Sem dados</div>';
-
-  const porFuncao = {};
-  cadastro.forEach(c => { porFuncao[c.funcao||'—'] = (porFuncao[c.funcao||'—']||0) + 1; });
-  const maxFuncao = Math.max(...Object.values(porFuncao), 1);
-  document.getElementById('barFuncao').innerHTML = Object.entries(porFuncao)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([nome,val]) => `
-      <div class="bar-row">
-        <div class="bar-label">${nome}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxFuncao*100).toFixed(1)}%; background:var(--amber)"></div></div>
-        <div class="bar-val">${val} pessoa${val>1?'s':''}</div>
-      </div>`).join('') || '<div class="empty-state">Sem dados</div>';
-
-  const porMotivo = {};
-  ocorrencias.forEach(o => { const m=nomeCanonico(o.motivo)||'—'; porMotivo[m]=(porMotivo[m]||0)+1; });
-  const maxMotivo = Math.max(...Object.values(porMotivo), 1);
-  document.getElementById('barMotivo').innerHTML = Object.entries(porMotivo)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([nome,val]) => `
-      <div class="bar-row">
-        <div class="bar-label">${nome}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${(val/maxMotivo*100).toFixed(1)}%; background:var(--cyan)"></div></div>
-        <div class="bar-val">${val} ocorr.</div>
-      </div>`).join('') || '<div class="empty-state">Sem ocorrências</div>';
 
   document.getElementById('periodoLabel').textContent = `${labelMes(mesAtivo).toUpperCase()} · ${totalColab} COLABORADORES · ${totalOcorr} OCORRÊNCIAS`;
 }
@@ -1269,6 +1512,7 @@ function opcoesFuncao(atual){
 
 function renderCadastro(){
   popularFiltrosCadastro();
+  atualizarDatalistNomes();
   const busca = document.getElementById('cadBusca').value.trim().toUpperCase();
   const fEmp = document.getElementById('cadFiltroEmpresa').value;
   const fFun = document.getElementById('cadFiltroFuncao').value;
@@ -1283,8 +1527,11 @@ function renderCadastro(){
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum colaborador encontrado com esse filtro em ${labelMes(mesAtivo)}.</div></td></tr>`;
     return;
   }
+  const fechado = mesEstaFechado();
+  document.getElementById('btnAddCadastro').disabled = fechado;
+
   tbody.innerHTML = linhas.map(c => {
-    const travado = c.travado === true;
+    const travado = c.travado === true || fechado;
     const dis = travado ? 'disabled' : '';
     return `
     <tr data-idx="${c._i}">
@@ -1294,7 +1541,7 @@ function renderCadastro(){
       <td><input class="num-in" data-f="va" type="number" step="0.01" value="${Number(c.va).toFixed(2)}" ${dis}></td>
       <td><input class="num-in" data-f="vt" type="number" step="0.01" value="${Number(c.vt).toFixed(2)}" ${dis}></td>
       <td class="row-actions">
-        <button data-lock="${c._i}" title="${travado ? 'Destravar para editar' : 'Travar edição'}" style="${travado?'':'color:var(--amber);'}">${travado ? '🔒' : '✏️'}</button>
+        <button data-lock="${c._i}" title="${fechado ? 'Mês fechado — reabra em Fechamento' : (travado ? 'Destravar para editar' : 'Travar edição')}" style="${travado?'':'color:var(--amber);'}" ${fechado?'disabled':''}>${travado ? '🔒' : '✏️'}</button>
         <button data-del="${c._i}" title="Remover" ${travado?'disabled':''}>✕</button>
       </td>
     </tr>`;
@@ -1305,9 +1552,13 @@ function renderCadastro(){
     inp.addEventListener(evt, e => {
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
+      const c = cadastro[idx];
       let val = e.target.value;
       if (field === 'va' || field === 'vt') val = parseFloat(val) || 0;
-      cadastro[idx][field] = val;
+      if (field === 'va' || field === 'vt' || field === 'empresa'){
+        registrarLog('Cadastro', c.nome, field.toUpperCase(), c[field], val);
+      }
+      c[field] = val;
       autoSave('cadSaveInd');
       renderDashboard();
       renderFechamento();
@@ -1363,6 +1614,18 @@ function exportarCadastroPdf(){
 
 function escAttr(s){ return String(s??'').replace(/"/g,'&quot;'); }
 
+// Datalist compartilhada de nomes do Cadastro (mês ativo), usada no
+// autocompletar do campo "Nome" em Ocorrências e Anotações Financeiras.
+// Atualizada sempre que qualquer uma dessas telas renderiza.
+function atualizarDatalistNomes(){
+  if (!document.getElementById('dl-nomes')){
+    const dl = document.createElement('datalist');
+    dl.id = 'dl-nomes';
+    document.body.appendChild(dl);
+  }
+  document.getElementById('dl-nomes').innerHTML = cadastro.map(c=>`<option value="${escAttr(c.nome)}">`).join('');
+}
+
 // ---------------------------------------------------------------
 // Render: OCORRENCIAS
 // ---------------------------------------------------------------
@@ -1376,6 +1639,8 @@ function popularFiltrosOcorrencias(){
 
 function renderOcorrencias(){
   popularFiltrosOcorrencias();
+  atualizarDatalistNomes();
+  document.getElementById('btnAddOcorrencia').disabled = mesEstaFechado();
   const busca = document.getElementById('ocBusca').value.trim().toUpperCase();
   const fMot = document.getElementById('ocFiltroMotivo').value;
   const fData = document.getElementById('ocFiltroData').value;
@@ -1448,7 +1713,7 @@ function renderOcorrencias(){
     const canon = nomeCanonico(o.motivo).toUpperCase();
     const pendente = canon.startsWith('FALTA') && o.revisado === false;
     const ferias = ehFerias(o.motivo);
-    const bloqueado = o.revisado === true;
+    const bloqueado = o.revisado === true || mesEstaFechado();
     const dis = bloqueado ? 'disabled' : '';
     const chaveDup = `${(o.nome||'').trim().toUpperCase()}|${o.data||''}|${canon}`;
     const duplicada = (o.nome||'').trim() && o.data && canon && (contagemDup[chaveDup]||0) > 1;
@@ -1480,25 +1745,18 @@ function renderOcorrencias(){
       <td><input class="num-in" data-f="diasVaVt" type="number" step="1" value="${o.diasVaVt||0}" ${dis}></td>
       <td><input class="num-in" data-f="dobrasVa" type="number" step="1" value="${o.dobrasVa||0}" ${dis}></td>
       <td style="text-align:center">
-        <button class="btn ghost" data-lock="${o._i}" title="${bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição'}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}">${bloqueado ? '🔒' : '🔓'}</button>
+        <button class="btn ghost" data-lock="${o._i}" title="${mesEstaFechado() ? 'Mês fechado — reabra em Fechamento' : (bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}" ${mesEstaFechado()?'disabled':''}>${bloqueado ? '🔒' : '🔓'}</button>
       </td>
       <td class="row-actions"><button data-del="${o._i}" title="Remover" ${dis}>✕</button></td>
     </tr>`;
   }).join('');
-
-  if (!document.getElementById('dl-nomes')){
-    const dl = document.createElement('datalist');
-    dl.id = 'dl-nomes';
-    document.body.appendChild(dl);
-  }
-  document.getElementById('dl-nomes').innerHTML = nomesCadastro.map(n=>`<option value="${escAttr(n)}">`).join('');
 
   tbody.querySelectorAll('input,select').forEach(inp => {
     inp.addEventListener('input', e => {
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
       const o = ocorrencias[idx];
-      if (o.revisado === true) return; // travado — não edita
+      if (o.revisado === true || mesEstaFechado()) return; // travado — não edita
 
       let val = e.target.value;
       if (['horasSabado','horasDomingo','adicionalNoturno'].includes(field)){
@@ -1507,6 +1765,9 @@ function renderOcorrencias(){
         val = parseFloat(val)||0;
       } else if (field === 'lanche'){
         val = e.target.checked;
+      }
+      if (field === 'dias' || field === 'motivo'){
+        registrarLog('Ocorrências', o.nome, field.toUpperCase(), o[field], val);
       }
       o[field] = val;
 
@@ -1573,6 +1834,7 @@ function renderOcorrencias(){
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.del);
       if (ocorrencias[idx].revisado === true){ alert('Essa ocorrência está conferida e travada. Destrave antes de remover.'); return; }
+      if (mesEstaFechado()){ avisoMesFechado(); return; }
       ocorrencias.splice(idx,1);
       ocSelecionados.clear(); // índices mudam ao remover — mais seguro limpar a seleção
       autoSave('ocSaveInd');
@@ -1810,22 +2072,27 @@ function popularFiltroTipoFinanceiro(){
 function renderAnotacoes(){
   renderTiposFinanceiros();
   popularFiltroTipoFinanceiro();
+  renderAlertaAnotacoesFechamento();
+  atualizarDatalistNomes();
 
   const busca = document.getElementById('anBusca').value.trim().toUpperCase();
   const fTipo = document.getElementById('anFiltroTipo').value;
   const fNatureza = document.getElementById('anFiltroNatureza').value;
   const fData = document.getElementById('anFiltroData').value;
   const soNaoConferidos = document.getElementById('anSoNaoConferidos').checked;
+  const soNaoEnviados = document.getElementById('anSoNaoEnviados').checked;
 
   // KPIs do mês inteiro (independem do filtro em tela) — só informativo, não afeta o Fechamento
   const totalDesconto = lancamentosFinanceiros.filter(l=>naturezaDoTipo(l.tipo)==='desconto').reduce((s,l)=>s+(Number(l.valor)||0),0);
   const totalPagamento = lancamentosFinanceiros.filter(l=>naturezaDoTipo(l.tipo)==='pagamento').reduce((s,l)=>s+(Number(l.valor)||0),0);
   const pendentes = lancamentosFinanceiros.filter(l=>l.revisado===false).length;
+  const naoEnviados = lancamentosFinanceiros.filter(l=>l.enviado!==true).length;
   document.getElementById('anKpiGrid').innerHTML = `
     <div class="kpi"><div class="label">Total anotado — Desconto</div><div class="value" style="color:var(--magenta)">${fmtBRL(totalDesconto)}</div></div>
     <div class="kpi"><div class="label">Total anotado — Pagamento</div><div class="value" style="color:var(--green)">${fmtBRL(totalPagamento)}</div></div>
     <div class="kpi"><div class="label">Lançamentos em ${labelMes(mesAtivo)}</div><div class="value">${lancamentosFinanceiros.length}</div></div>
     <div class="kpi"><div class="label">Pendentes de conferência</div><div class="value" style="color:${pendentes?'var(--amber)':'inherit'}">${pendentes}</div></div>
+    <div class="kpi"><div class="label">Não enviados pra contabilidade</div><div class="value" style="color:${naoEnviados?'var(--brand-red)':'inherit'}">${naoEnviados}</div></div>
   `;
 
   const linhas = lancamentosFinanceiros
@@ -1835,11 +2102,14 @@ function renderAnotacoes(){
     .filter(l => !fNatureza || naturezaDoTipo(l.tipo)===fNatureza)
     .filter(l => !fData || l.data===fData)
     .filter(l => !soNaoConferidos || l.revisado===false)
+    .filter(l => !soNaoEnviados || l.enviado!==true)
     .sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', 'pt-BR', {sensitivity:'base'}));
+
+  document.getElementById('btnAddLancamento').disabled = mesEstaFechado();
 
   const tbody = document.querySelector('#tblAnotacoes tbody');
   if (linhas.length === 0){
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma anotação lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma anotação lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
     document.querySelector('#tblAnotacoes tfoot').innerHTML = '';
     return;
   }
@@ -1847,8 +2117,9 @@ function renderAnotacoes(){
   const tiposUnicos = [...new Set(catalogoTiposFinanceiros.map(t=>t.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
 
   tbody.innerHTML = linhas.map(l => {
-    const bloqueado = l.revisado === true;
+    const bloqueado = l.revisado === true || mesEstaFechado();
     const dis = bloqueado ? 'disabled' : '';
+    const enviado = l.enviado === true;
     const nat = naturezaDoTipo(l.tipo);
     const corNat = nat === 'pagamento' ? 'var(--green)' : 'var(--magenta)';
     return `
@@ -1865,7 +2136,10 @@ function renderAnotacoes(){
       <td><input class="num-in" data-f="valor" type="number" step="0.01" min="0" value="${l.valor||0}" ${dis}></td>
       <td><input data-f="observacao" value="${escAttr(l.observacao)}" placeholder="Observação (opcional)…" ${dis}></td>
       <td style="text-align:center">
-        <button class="btn ghost" data-lock="${l._i}" title="${bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição'}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}">${bloqueado ? '🔒' : '🔓'}</button>
+        <button class="btn ghost" data-lock="${l._i}" title="${mesEstaFechado() ? 'Mês fechado — reabra em Fechamento' : (l.revisado===true ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${l.revisado===true?'color:var(--amber); border-color:var(--amber);':''}" ${mesEstaFechado()?'disabled':''}>${l.revisado===true ? '🔒' : '🔓'}</button>
+      </td>
+      <td style="text-align:center">
+        <button class="btn ghost" data-enviado="${l._i}" title="${enviado ? 'Já foi mandado pra contabilidade — clique para desmarcar' : 'Marcar como já enviado pra contabilidade'}" style="padding:4px 8px; ${enviado?'color:var(--green); border-color:var(--green);':''}">${enviado ? '📤' : '⬜'}</button>
       </td>
       <td class="row-actions"><button data-del="${l._i}" title="Remover" ${dis}>✕</button></td>
     </tr>`;
@@ -1876,7 +2150,7 @@ function renderAnotacoes(){
   document.querySelector('#tblAnotacoes tfoot').innerHTML = `
     <tr class="total-row">
       <td colspan="4">TOTAL no filtro (${linhas.length} lançamento(s))</td>
-      <td colspan="4">${fmtBRL(totDesc)} em desconto · ${fmtBRL(totPag)} em pagamento</td>
+      <td colspan="5">${fmtBRL(totDesc)} em desconto · ${fmtBRL(totPag)} em pagamento</td>
     </tr>`;
 
   tbody.querySelectorAll('input[data-f],select[data-f]').forEach(inp => {
@@ -1884,9 +2158,12 @@ function renderAnotacoes(){
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
       const l = lancamentosFinanceiros[idx];
-      if (l.revisado === true) return;
+      if (l.revisado === true || mesEstaFechado()) return;
       let val = e.target.value;
       if (field === 'valor') val = parseFloat(val)||0;
+      if (field === 'valor' || field === 'tipo'){
+        registrarLog('Anotações', l.nome, field.toUpperCase(), l[field], val);
+      }
       l[field] = val;
       autoSave('anSaveInd');
       if (field === 'tipo') renderAnotacoes();
@@ -1914,10 +2191,21 @@ function renderAnotacoes(){
       renderAnotacoes();
     });
   });
+  tbody.querySelectorAll('[data-enviado]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.enviado);
+      const l = lancamentosFinanceiros[idx];
+      l.enviado = !(l.enviado === true);
+      autoSave('anSaveInd');
+      renderAnotacoes();
+      renderFechamento();
+    });
+  });
   tbody.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.del);
       if (lancamentosFinanceiros[idx].revisado === true){ alert('Esse lançamento está conferido e travado. Destrave antes de remover.'); return; }
+      if (mesEstaFechado()){ avisoMesFechado(); return; }
       if (!confirm('Remover esse lançamento?')) return;
       lancamentosFinanceiros.splice(idx,1);
       autoSave('anSaveInd');
@@ -1927,7 +2215,7 @@ function renderAnotacoes(){
 }
 
 function addLancamentoFinanceiro(){
-  lancamentosFinanceiros.push({data:'', nome:'', tipo:'', valor:0, observacao:'', revisado:false});
+  lancamentosFinanceiros.push({data:'', nome:'', tipo:'', valor:0, observacao:'', revisado:false, enviado:false});
   autoSave('anSaveInd');
   renderAnotacoes();
   const rows = document.querySelectorAll('#tblAnotacoes tbody tr');
@@ -1939,7 +2227,7 @@ function exportarAnotacoesXlsx(){
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet([...lancamentosFinanceiros].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(l=>({
     DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
-    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N',
   })));
   XLSX.utils.book_append_sheet(wb, ws, 'ANOTACOES');
   XLSX.writeFile(wb, `anotacoes_financeiras_${mesAtivo}.xlsx`);
@@ -1963,14 +2251,16 @@ function exportarAnotacoesPdf(){
 // Render: FECHAMENTO
 // ---------------------------------------------------------------
 function renderDiasUteisPorEmpresa(){
+  const fechado = mesEstaFechado();
   document.getElementById('diasUteisMes').value = diasUteisMes;
+  document.getElementById('diasUteisMes').disabled = fechado;
   const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
   const wrap = document.getElementById('diasUteisEmpresaLista');
   wrap.innerHTML = empresas.map(emp => `
     <label style="display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted);">
       <span style="color:${corEmpresa(emp)}">${escAttr(emp)}</span>
       <input class="num-in" data-emp="${escAttr(emp)}" type="number" min="0" max="31" step="1"
-        placeholder="${diasUteisMes}" value="${diasUteisPorEmpresa[emp] ?? ''}" style="width:70px">
+        placeholder="${diasUteisMes}" value="${diasUteisPorEmpresa[emp] ?? ''}" style="width:70px" ${fechado?'disabled':''}>
     </label>`).join('');
   wrap.querySelectorAll('[data-emp]').forEach(inp => {
     inp.addEventListener('input', e => {
@@ -1993,9 +2283,120 @@ function dadosFechamentoFiltrados(){
   return dados;
 }
 
+// ---------------------------------------------------------------
+// Lembrete: lançamentos de Anotações Financeiras ainda não enviados
+// pra contabilidade, mostrado aqui no Fechamento (a aba que nunca é
+// esquecida) pra não deixar passar o que precisa ir junto. Baseado
+// em "enviado" (não em "conferido" — conferir é só travar a edição;
+// enviar é o que realmente importa pra não esquecer). Não altera o
+// cálculo do Fechamento em nada.
+// ---------------------------------------------------------------
+function empresaDoLancamento(nomeLancamento){
+  const nomeUp = (nomeLancamento||'').trim().toUpperCase();
+  const c = cadastro.find(c => c.nome.trim().toUpperCase() === nomeUp);
+  return c ? c.empresa : null;
+}
+
+function renderAlertaAnotacoesFechamento(){
+  const fEmp = document.getElementById('feFiltroEmpresa').value;
+  const pendentes = lancamentosFinanceiros
+    .filter(l => l.enviado !== true)
+    .map(l => ({...l, empresa: empresaDoLancamento(l.nome) || 'Sem empresa identificada'}))
+    .filter(l => !fEmp || l.empresa === fEmp)
+    .sort((a,b)=> (a.nome||'').localeCompare(b.nome||'', 'pt-BR', {sensitivity:'base'}));
+
+  const box = document.getElementById('alertaAnotacoesFechamento');
+  if (pendentes.length === 0){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const valorTotal = pendentes.reduce((s,l)=>s+(Number(l.valor)||0),0);
+  const lista = pendentes
+    .map(l => `${escAttr(l.nome)} <span style="color:var(--muted)">(${escAttr(l.empresa)})</span>: ${fmtBRL(Number(l.valor)||0)}`)
+    .join(' &nbsp;·&nbsp; ');
+
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="alert-banner info">
+      <span class="alert-icon">💰</span>
+      <div>
+        <strong>${pendentes.length} lançamento${pendentes.length>1?'s':''} ainda não enviado${pendentes.length>1?'s':''} pra contabilidade em Anotações Financeiras${fEmp?` de ${fEmp}`:''} — ${fmtBRL(valorTotal)}.</strong>
+        Não esqueça de mandar junto com o Fechamento de ${labelMes(mesAtivo)}:<br>
+        <span style="font-size:12.5px;">${lista}</span>
+      </div>
+      <button class="btn" id="btnVerAnotacoesPendentes">Ver Anotações</button>
+    </div>`;
+  document.getElementById('btnVerAnotacoesPendentes').addEventListener('click', () => {
+    ativarTab('anotacoes');
+    document.getElementById('anSoNaoEnviados').checked = true;
+    renderAnotacoes();
+  });
+}
+
+// Mapa nome (maiúsculo) -> lançamentos ainda não enviados, usado pra
+// marcar o nome do colaborador na tabela do Fechamento (§ abaixo).
+function lancamentosPendentesPorNome(){
+  const map = {};
+  lancamentosFinanceiros.forEach(l => {
+    if (l.enviado === true) return;
+    const nomeUp = (l.nome||'').trim().toUpperCase();
+    if (!nomeUp) return;
+    if (!map[nomeUp]) map[nomeUp] = [];
+    map[nomeUp].push(l);
+  });
+  return map;
+}
+
+// ---------------------------------------------------------------
+// Mês fechado: banner de status + botão de fechar/reabrir na aba
+// Fechamento. Fechar trava edição em Cadastro/Ocorrências/Anotações
+// do mês inteiro (além dos cadeados por linha que já existiam).
+// ---------------------------------------------------------------
+function renderStatusMesFechado(){
+  const box = document.getElementById('statusMesFechado');
+  if (mesFechado){
+    const quando = mesFechadoEm ? new Date(mesFechadoEm).toLocaleString('pt-BR') : '';
+    box.innerHTML = `
+      <div class="alert-banner">
+        <span class="alert-icon">🔒</span>
+        <div>
+          <strong>${labelMes(mesAtivo)} está fechado${quando ? ' desde ' + quando : ''}.</strong>
+          Cadastro, Ocorrências e Anotações Financeiras deste mês estão travados pra edição.
+        </div>
+        <button class="btn" id="btnReabrirMes">🔓 Reabrir mês</button>
+      </div>`;
+    document.getElementById('btnReabrirMes').addEventListener('click', () => {
+      if (!confirm(`Reabrir ${labelMes(mesAtivo)} pra edição?`)) return;
+      mesFechado = false;
+      mesFechadoEm = null;
+      autoSave('feSaveInd');
+      renderTudo();
+    });
+  } else {
+    box.innerHTML = `
+      <div class="toolbar" style="margin-bottom:14px;">
+        <span class="footnote" style="margin:0;">Depois de mandar o Fechamento pra contabilidade, feche o mês pra evitar edições por engano.</span>
+        <div class="spacer"></div>
+        <button class="btn" id="btnFecharMes">🔒 Fechar mês</button>
+      </div>`;
+    document.getElementById('btnFecharMes').addEventListener('click', () => {
+      if (!confirm(`Fechar ${labelMes(mesAtivo)}? Isso trava a edição em Cadastro, Ocorrências e Anotações Financeiras deste mês. Dá pra reabrir depois se precisar.`)) return;
+      mesFechado = true;
+      mesFechadoEm = new Date().toISOString();
+      autoSave('feSaveInd');
+      renderTudo();
+    });
+  }
+}
+
 function renderFechamento(){
+  renderStatusMesFechado();
   renderDiasUteisPorEmpresa();
+  renderAlertaAnotacoesFechamento();
   const dados = dadosFechamentoFiltrados();
+  const pendentesPorNome = lancamentosPendentesPorNome();
 
   const tbody = document.querySelector('#tblFechamento tbody');
   if (dados.length === 0){
@@ -2003,9 +2404,14 @@ function renderFechamento(){
     document.querySelector('#tblFechamento tfoot').innerHTML = '';
     return;
   }
-  tbody.innerHTML = dados.map(f => `
+  tbody.innerHTML = dados.map(f => {
+    const pend = pendentesPorNome[f.nome.trim().toUpperCase()];
+    const marcador = pend
+      ? `<span title="${pend.length} lançamento${pend.length>1?'s':''} ainda não enviado${pend.length>1?'s':''} pra contabilidade em Anotações Financeiras (${fmtBRL(pend.reduce((s,l)=>s+(Number(l.valor)||0),0))})" style="cursor:help; margin-right:5px;">💰</span>`
+      : '';
+    return `
     <tr>
-      <td>${escAttr(f.nome)}</td>
+      <td>${marcador}${escAttr(f.nome)}</td>
       <td><span class="tag" style="color:${corEmpresa(f.empresa)}; background:${corEmpresa(f.empresa)}22;">${escAttr(f.empresa)}</span></td>
       <td class="num grp-l">${f.diasUteis}</td>
       <td class="num">${f.descVA}</td>
@@ -2021,7 +2427,8 @@ function renderFechamento(){
       <td class="num">${decParaHora(f.horasDomingo)}</td>
       <td class="num">${decParaHora(f.horasNoturnas)}</td>
       <td class="num grp-l"><strong>${fmtBRL(f.total)}</strong></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 
   const totais = dados.reduce((acc,f)=>{
     acc.valorVA += f.valorVA; acc.valorVT += f.valorVT; acc.total += f.total;
@@ -2064,6 +2471,8 @@ function renderSincronizar(){
   document.getElementById('listaMeses').innerHTML = mesesDisponiveis.map(c => `
     <div>${c===mesAtivo?'▶':'　'} <strong style="color:${c===mesAtivo?'var(--amber)':'var(--text)'}">${labelMes(c)}</strong> <span style="color:var(--muted)">(${c})</span></div>
   `).join('');
+  renderListaSnapshots();
+  renderHistoricoAlteracoes();
 }
 
 // ---------------------------------------------------------------
@@ -2309,6 +2718,15 @@ async function lerCartaoPontoPdf(file){
       lancamentosFinanceiros = dados?.lancamentosFinanceiros || [];
       diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
       baseInfo = dados?.baseInfo || baseInfo;
+      mesFechado = dados?.mesFechado === true;
+      mesFechadoEm = dados?.mesFechadoEm || null;
+      logAlteracoes = dados?.logAlteracoes || [];
+      mesUpdatedAtCarregado = dados?._updatedAt || null;
+      conflitoDetectado = false;
+    }
+    if (mesEstaFechado()){
+      status.innerHTML = `<div class="footnote">🔒 ${labelMes(chaveAlvo)} está fechado — reabra em Fechamento antes de importar.</div>`;
+      return;
     }
 
     const nomesCadastro = new Set(cadastro.map(c=>normHeader(c.nome)));
@@ -2496,6 +2914,15 @@ async function importarPonto(wb, chaveAlvo, nomeArquivo, status){
     ocorrencias = dados?.ocorrencias || [];
     diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
     baseInfo = dados?.baseInfo || baseInfo;
+    mesFechado = dados?.mesFechado === true;
+    mesFechadoEm = dados?.mesFechadoEm || null;
+    logAlteracoes = dados?.logAlteracoes || [];
+    mesUpdatedAtCarregado = dados?._updatedAt || null;
+    conflitoDetectado = false;
+  }
+  if (mesEstaFechado()){
+    status.innerHTML = `<div class="footnote">🔒 ${labelMes(chaveAlvo)} está fechado — reabra em Fechamento antes de importar.</div>`;
+    return;
   }
 
   const nomesCadastro = new Set(cadastro.map(c=>normHeader(c.nome)));
@@ -2592,7 +3019,7 @@ function exportarXlsx(){
 
   const wsAn = XLSX.utils.json_to_sheet(lancamentosFinanceiros.map(l=>({
     DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
-    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N',
   })));
   XLSX.utils.book_append_sheet(wb, wsAn, 'ANOTACOES (nao entra no total)');
 
@@ -2632,8 +3059,23 @@ function addOcorrencia(){
 // Tabs
 // ---------------------------------------------------------------
 function ativarTab(tab){
+  // Compatibilidade: "motivos" era uma aba própria e virou sub-aba
+  // dentro de Cadastro — quem ainda chama ativarTab('motivos') continua
+  // funcionando, só que agora abre Cadastro > Motivos.
+  if (tab === 'motivos'){
+    ativarTab('cadastro');
+    ativarSubTab('cadastro', 'motivos');
+    return;
+  }
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
   document.querySelectorAll('section.panel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+tab));
+}
+
+function ativarSubTab(tab, subtab){
+  const panel = document.getElementById('panel-'+tab);
+  if (!panel) return;
+  panel.querySelectorAll('.subtab-btn').forEach(b=>b.classList.toggle('active', b.dataset.subtab===subtab));
+  panel.querySelectorAll('.subpanel').forEach(p=>p.classList.toggle('active', p.id === 'subpanel-'+subtab));
 }
 
 function renderTudo(){
@@ -2724,10 +3166,21 @@ async function init(){
     diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(mesAtivo);
     diasUteisPorEmpresa = dados?.diasUteisPorEmpresa || {};
     baseInfo = dados?.baseInfo || { fonte:'—', atualizadoEm:null };
+    mesFechado = dados?.mesFechado === true;
+    mesFechadoEm = dados?.mesFechadoEm || null;
+    logAlteracoes = dados?.logAlteracoes || [];
+    mesUpdatedAtCarregado = dados?._updatedAt || null;
   }
 
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => ativarTab(btn.dataset.tab));
+  });
+
+  document.querySelectorAll('.subtab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const panel = btn.closest('section.panel');
+      ativarSubTab(panel.id.replace('panel-',''), btn.dataset.subtab);
+    });
   });
 
   document.getElementById('selMes').addEventListener('change', e => abrirMes(e.target.value));
@@ -2808,6 +3261,7 @@ async function init(){
   document.getElementById('anFiltroNatureza').addEventListener('change', renderAnotacoes);
   document.getElementById('anFiltroData').addEventListener('change', renderAnotacoes);
   document.getElementById('anSoNaoConferidos').addEventListener('change', renderAnotacoes);
+  document.getElementById('anSoNaoEnviados').addEventListener('change', renderAnotacoes);
   document.getElementById('btnAddLancamento').addEventListener('click', addLancamentoFinanceiro);
   document.getElementById('btnExportAnXlsx').addEventListener('click', exportarAnotacoesXlsx);
   document.getElementById('btnExportAnPdf').addEventListener('click', exportarAnotacoesPdf);
@@ -2852,6 +3306,7 @@ async function init(){
   renderTudo();
   avaliarLembreteBackup();
   setInterval(avaliarLembreteBackup, 15 * 60 * 1000);
+  verificarSnapshotDiario().then(() => { if (document.querySelector('#panel-sincronizar.active')) renderListaSnapshots(); });
 }
 
 init();
