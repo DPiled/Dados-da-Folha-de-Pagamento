@@ -1096,7 +1096,16 @@ async function carregarMesAtivoPreferido(){
 let mesUpdatedAtCarregado = null; // "carimbo" do mes: carregado por esta aba — usado pra travar contra sobrescrita por aba desatualizada
 let conflitoDetectado = false;    // true assim que uma tentativa de salvar é recusada por conflito — pausa o autosave até recarregar
 
-async function salvarDadosMes(chave){
+// Salvamentos automáticos são enfileirados (nunca dois ao mesmo tempo)
+// pra evitar que um se confunda com o outro, achando que "a aba ficou
+// desatualizada" quando na verdade era ela mesma salvando duas vezes
+// quase junto (ex: o de cada edição e o de 20 em 20 segundos).
+let filaSalvarMes = Promise.resolve();
+function salvarDadosMes(chave){
+  filaSalvarMes = filaSalvarMes.then(() => _salvarDadosMesReal(chave));
+  return filaSalvarMes;
+}
+async function _salvarDadosMesReal(chave){
   if (conflitoDetectado) return false; // já em conflito — não tenta mais salvar até a página recarregar
   try{
     const r = await window.storage.set(
@@ -1110,7 +1119,7 @@ async function salvarDadosMes(chave){
   }catch(e){
     if (e && e.conflict){
       conflitoDetectado = true;
-      mostrarAvisoConflito(chave);
+      mostrarAvisoConflito(labelMes(chave));
       return false;
     }
     console.error('Erro ao salvar mês', e);
@@ -1118,7 +1127,7 @@ async function salvarDadosMes(chave){
   }
 }
 
-function mostrarAvisoConflito(chave){
+function mostrarAvisoConflito(descricao){
   if (document.getElementById('avisoConflito')) return; // já mostrado
   const div = document.createElement('div');
   div.id = 'avisoConflito';
@@ -1128,7 +1137,7 @@ function mostrarAvisoConflito(chave){
       <div style="font-size:28px; margin-bottom:10px;">⚠️</div>
       <h3 style="margin:0 0 10px; font-family:var(--display); font-size:17px;">Essa aba ficou desatualizada</h3>
       <p style="color:var(--muted); font-size:13.5px; line-height:1.6; margin:0 0 18px;">
-        ${labelMes(chave)} foi alterado em outro lugar (outra aba, outro computador, ou essa mesma aba
+        ${descricao} foi alterado em outro lugar (outra aba, outro computador, ou essa mesma aba
         ficou aberta por muito tempo em segundo plano) desde que essa tela foi carregada. Pra não
         arriscar apagar o que foi salvo lá, essa aba <strong>parou de salvar automaticamente</strong>.
       </p>
@@ -1196,50 +1205,55 @@ function registrarLog(area, ref, campo, de, para){
   });
   if (logAlteracoes.length > 300) logAlteracoes.length = 300; // mantém só os mais recentes
 }
-async function salvarCatalogoMotivos(){
-  try{ await window.storage.set('catalogo-motivos', JSON.stringify(catalogoMotivos), false); return true; }
-  catch(e){ console.error('Erro ao salvar catálogo', e); return false; }
-}
-async function carregarCatalogoMotivos(){
+// Versão (updated_at) mais recente que ESTA aba conhece de cada catálogo
+// global — mesma trava usada nos dados do mês, agora também aqui, pra
+// não perder tipo/motivo/função/setor cadastrado por outra aba/lugar.
+const _versoesCatalogos = {};
+
+async function carregarCatalogoGlobal(chave){
   try{
-    const r = await window.storage.get('catalogo-motivos', false);
-    if (r && r.value) return JSON.parse(r.value);
+    const r = await window.storage.get(chave, false);
+    if (r && r.value){
+      _versoesCatalogos[chave] = r.updatedAt || null;
+      return JSON.parse(r.value);
+    }
   }catch(e){}
   return null;
 }
-async function salvarCatalogoFinanceiro(){
-  try{ await window.storage.set('catalogo-financeiro', JSON.stringify(catalogoTiposFinanceiros), false); return true; }
-  catch(e){ console.error('Erro ao salvar catálogo financeiro', e); return false; }
+
+const _filasSalvarCatalogo = {}; // chave -> fila de salvamentos em andamento (mesma ideia da fila do mês)
+async function salvarCatalogoGlobal(chave, valor, nomeAmigavel){
+  const anterior = _filasSalvarCatalogo[chave] || Promise.resolve();
+  const atual = anterior.then(() => _salvarCatalogoGlobalReal(chave, valor, nomeAmigavel), () => _salvarCatalogoGlobalReal(chave, valor, nomeAmigavel));
+  _filasSalvarCatalogo[chave] = atual;
+  return atual;
 }
-async function carregarCatalogoFinanceiro(){
+
+async function _salvarCatalogoGlobalReal(chave, valor, nomeAmigavel){
+  if (conflitoDetectado) return false;
   try{
-    const r = await window.storage.get('catalogo-financeiro', false);
-    if (r && r.value) return JSON.parse(r.value);
-  }catch(e){}
-  return null;
+    const r = await window.storage.set(chave, JSON.stringify(valor), false, _versoesCatalogos[chave] || null);
+    _versoesCatalogos[chave] = r.updatedAt;
+    return true;
+  }catch(e){
+    if (e && e.conflict){
+      conflitoDetectado = true;
+      mostrarAvisoConflito(nomeAmigavel);
+      return false;
+    }
+    console.error('Erro ao salvar catálogo', chave, e);
+    return false;
+  }
 }
-async function salvarCatalogoFuncoes(){
-  try{ await window.storage.set('catalogo-funcoes', JSON.stringify(catalogoFuncoes), false); return true; }
-  catch(e){ console.error('Erro ao salvar catálogo de funções', e); return false; }
-}
-async function carregarCatalogoFuncoes(){
-  try{
-    const r = await window.storage.get('catalogo-funcoes', false);
-    if (r && r.value) return JSON.parse(r.value);
-  }catch(e){}
-  return null;
-}
-async function salvarCatalogoSetores(){
-  try{ await window.storage.set('catalogo-setores', JSON.stringify(catalogoSetores), false); return true; }
-  catch(e){ console.error('Erro ao salvar catálogo de setores', e); return false; }
-}
-async function carregarCatalogoSetores(){
-  try{
-    const r = await window.storage.get('catalogo-setores', false);
-    if (r && r.value) return JSON.parse(r.value);
-  }catch(e){}
-  return null;
-}
+
+async function salvarCatalogoMotivos(){ return salvarCatalogoGlobal('catalogo-motivos', catalogoMotivos, 'O catálogo de Motivos'); }
+async function carregarCatalogoMotivos(){ return carregarCatalogoGlobal('catalogo-motivos'); }
+async function salvarCatalogoFinanceiro(){ return salvarCatalogoGlobal('catalogo-financeiro', catalogoTiposFinanceiros, 'O catálogo de Tipos Financeiros'); }
+async function carregarCatalogoFinanceiro(){ return carregarCatalogoGlobal('catalogo-financeiro'); }
+async function salvarCatalogoFuncoes(){ return salvarCatalogoGlobal('catalogo-funcoes', catalogoFuncoes, 'O catálogo de Funções'); }
+async function carregarCatalogoFuncoes(){ return carregarCatalogoGlobal('catalogo-funcoes'); }
+async function salvarCatalogoSetores(){ return salvarCatalogoGlobal('catalogo-setores', catalogoSetores, 'O catálogo de Setores'); }
+async function carregarCatalogoSetores(){ return carregarCatalogoGlobal('catalogo-setores'); }
 
 function flashSave(id){
   const el = document.getElementById(id);
