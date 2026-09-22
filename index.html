@@ -254,9 +254,10 @@
   #tblCadastro th:nth-child(1), #tblCadastro td:nth-child(1){ min-width:280px; }
   #tblCadastro th:nth-child(2), #tblCadastro td:nth-child(2){ min-width:110px; }
   #tblCadastro th:nth-child(3), #tblCadastro td:nth-child(3){ min-width:170px; }
-  #tblCadastro th:nth-child(4), #tblCadastro td:nth-child(4),
-  #tblCadastro th:nth-child(5), #tblCadastro td:nth-child(5){ min-width:110px; }
-  #tblCadastro th:nth-child(6), #tblCadastro td:nth-child(6){ min-width:70px; text-align:center; }
+  #tblCadastro th:nth-child(4), #tblCadastro td:nth-child(4){ min-width:150px; }
+  #tblCadastro th:nth-child(5), #tblCadastro td:nth-child(5),
+  #tblCadastro th:nth-child(6), #tblCadastro td:nth-child(6){ min-width:110px; }
+  #tblCadastro th:nth-child(7), #tblCadastro td:nth-child(7){ min-width:100px; text-align:center; }
   #tblCadastro td input[data-f="nome"]{ white-space:nowrap; }
   #tblCadastro td input:disabled, #tblCadastro td select:disabled{
     color:var(--muted); cursor:default; opacity:.85;
@@ -409,6 +410,7 @@
   <button class="tab-btn active" data-tab="cadastro"><span class="badge">CA</span>Cadastro</button>
   <button class="tab-btn" data-tab="ocorrencias"><span class="badge">OC</span>Ocorrências</button>
   <button class="tab-btn" data-tab="fechamento"><span class="badge">FE</span>Fechamento</button>
+  <button class="tab-btn" data-tab="indicadores"><span class="badge">IN</span>Indicadores</button>
   <button class="tab-btn" data-tab="anotacoes"><span class="badge">AN</span>Anotações Financeiras</button>
   <button class="tab-btn" data-tab="sincronizar"><span class="badge">SY</span>Sincronizar</button>
 </nav>
@@ -416,6 +418,7 @@
 <div id="avisosGlobais" style="padding:12px 20px 0;">
   <div id="lembreteBackup" style="display:none;"></div>
   <div id="alertaFaltas" style="display:none;"></div>
+  <div id="alertaFaltasSemAnotacao" style="display:none;"></div>
 </div>
 
 <main>
@@ -426,14 +429,19 @@
     <nav class="subtabs">
       <button class="subtab-btn active" data-subtab="colaboradores">Colaboradores</button>
       <button class="subtab-btn" data-subtab="motivos">Motivos</button>
+      <button class="subtab-btn" data-subtab="funcoes-setores">Funções e Setores</button>
     </nav>
 
     <div class="subpanel active" id="subpanel-colaboradores">
-      <p class="section-desc">Colaboradores, empresa, funcao e valores diarios de VA/VT. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
+      <p class="section-desc">Colaboradores, empresa, funcao, setor e valores diarios de VA/VT. Clique no lapis (✏️) para destravar e editar a linha; clique no cadeado (🔒) para travar novamente.</p>
       <div class="toolbar">
         <input type="text" id="cadBusca" placeholder="Buscar por nome…">
         <select id="cadFiltroEmpresa"><option value="">Todas empresas</option></select>
         <select id="cadFiltroFuncao"><option value="">Todas funcoes</option></select>
+        <select id="cadFiltroSetor"><option value="">Todos setores</option></select>
+        <label style="display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted);">
+          <input type="checkbox" id="cadMostrarDesligados" style="width:auto;"> mostrar desligados
+        </label>
         <div class="spacer"></div>
         <span class="save-indicator" id="cadSaveInd">salvo</span>
         <button class="btn ghost" id="btnExportCadXlsx" title="Baixar cadastro em Excel">⬇ Excel</button>
@@ -443,7 +451,7 @@
       <div class="table-wrap">
         <table id="tblCadastro">
           <thead><tr>
-            <th>Nome</th><th>Empresa</th><th>Funcao</th><th>VA diario</th><th>VT diario</th><th></th>
+            <th>Nome</th><th>Empresa</th><th>Funcao</th><th>Setor</th><th>VA diario</th><th>VT diario</th><th></th>
           </tr></thead>
           <tbody></tbody>
         </table>
@@ -466,6 +474,40 @@
           </tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+
+    <div class="subpanel" id="subpanel-funcoes-setores">
+      <p class="section-desc">Catálogos usados no Cadastro de colaboradores — mude aqui e já valem em todos os meses. Clique no lapis (✏️) para destravar e editar; no cadeado (🔒) para travar de novo.</p>
+      <div class="two-col">
+        <div class="bar-block">
+          <h3>Funções</h3>
+          <div class="toolbar" style="margin-bottom:10px;">
+            <div class="spacer"></div>
+            <span class="save-indicator" id="fsFuncaoSaveInd">salvo</span>
+            <button class="btn primary" id="btnAddFuncao">+ Função</button>
+          </div>
+          <div class="table-wrap" style="max-height:420px;">
+            <table id="tblFuncoes">
+              <thead><tr><th>Função</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bar-block">
+          <h3>Setores</h3>
+          <div class="toolbar" style="margin-bottom:10px;">
+            <div class="spacer"></div>
+            <span class="save-indicator" id="fsSetorSaveInd">salvo</span>
+            <button class="btn primary" id="btnAddSetor">+ Setor</button>
+          </div>
+          <div class="table-wrap" style="max-height:420px;">
+            <table id="tblSetores">
+              <thead><tr><th>Setor</th><th></th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -520,6 +562,7 @@
     <h2 class="section-title">Fechamento</h2>
     <p class="section-desc">Recalcula automaticamente a partir do Cadastro + Ocorrências, replicando a lógica da planilha original.</p>
     <div id="statusMesFechado"></div>
+    <div id="alertaNomesOrfaos" style="display:none;"></div>
     <div id="alertaAnotacoesFechamento" style="display:none;"></div>
     <div class="bar-block" id="diasUteisPorEmpresaBlock">
       <h3>Dias úteis por empresa</h3>
@@ -571,6 +614,16 @@
         <tbody></tbody>
         <tfoot></tfoot>
       </table>
+    </div>
+  </section>
+
+  <!-- ===================== INDICADORES ===================== -->
+  <section class="panel" id="panel-indicadores">
+    <h2 class="section-title">Indicadores</h2>
+    <p class="section-desc">Comparativos e tendência do Fechamento — não afeta o cálculo, é só pra você enxergar variação de um mês pro outro.</p>
+    <div class="two-col">
+      <div id="comparativoMesAnterior"></div>
+      <div id="historicoFechamentos"></div>
     </div>
   </section>
 
@@ -831,15 +884,19 @@ let diasUteisPorEmpresa = {}; // override por empresa — cada empresa pode ter 
 let baseInfo = { fonte: 'Base original enviada', atualizadoEm: null };
 let catalogoMotivos = [];       // global, compartilhado entre todos os meses
 let lancamentosFinanceiros = []; // anotações de desconto/pagamento do mês ativo — não entra no cálculo do Fechamento
-let mesFechado = false;    // trava geral do mês — impede edição em Cadastro/Ocorrências/Anotações depois de enviado pra contabilidade
-let mesFechadoEm = null;   // timestamp (ISO) de quando o mês foi fechado
+let empresasFechadas = {}; // { "ILED": {fechado:true, fechadoEm:'2026-...'}, ... } — trava por empresa, não o mês inteiro
 let logAlteracoes = [];    // histórico de mudanças em campos-chave do mês ativo (mais recente primeiro)
 let catalogoTiposFinanceiros = []; // global, compartilhado entre todos os meses
 const CATALOGO_FINANCEIRO_PADRAO = [
   {tipo:'MULTA DE TRÂNSITO', natureza:'desconto', travado:false},
   {tipo:'GRATIFICAÇÃO', natureza:'pagamento', travado:false},
   {tipo:'VALE / ADIANTAMENTO', natureza:'desconto', travado:false},
+  {tipo:'DESCONTO DE FALTA', natureza:'desconto', travado:false},
 ];
+let catalogoFuncoes = []; // global, compartilhado entre todos os meses — vinculado ao colaborador no Cadastro
+const CATALOGO_FUNCOES_PADRAO = ['ADM','COMERCIAL','CONTROLE','ESTOQUE','EXTERNA','LABORATORIO'].map(nome=>({nome, travado:false}));
+let catalogoSetores = []; // global, compartilhado entre todos os meses — vinculado ao colaborador no Cadastro
+const CATALOGO_SETORES_PADRAO = [];
 
 const fmtBRL = v => (v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
 
@@ -1044,7 +1101,7 @@ async function salvarDadosMes(chave){
   try{
     const r = await window.storage.set(
       chaveStorageMes(chave),
-      JSON.stringify({ cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, mesFechado, mesFechadoEm, logAlteracoes }),
+      JSON.stringify({ cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, empresasFechadas, logAlteracoes }),
       false,
       mesUpdatedAtCarregado
     );
@@ -1100,10 +1157,33 @@ async function carregarDadosMes(chave){
 // Mês fechado: trava geral pós-envio pra contabilidade, e log de
 // alterações em campos-chave (auditoria simples, por mês).
 // ---------------------------------------------------------------
-function mesEstaFechado(){ return mesFechado === true; }
+// Trava por empresa (não o mês inteiro) — cada empresa fecha/reabre
+// independente das outras, já que nem sempre fecham no mesmo dia.
+function empresaEstaFechada(empresa){
+  return !!(empresasFechadas[empresa] && empresasFechadas[empresa].fechado);
+}
+function mesEstaFechado(){
+  // "Tudo fechado": todas as empresas que aparecem no cadastro deste mês estão fechadas.
+  const emps = [...new Set(cadastro.map(c=>c.empresa))];
+  return emps.length > 0 && emps.every(empresaEstaFechada);
+}
+function resolverEmpresasFechadas(dados){
+  if (dados.empresasFechadas) return dados.empresasFechadas;
+  if (dados.mesFechado === true){
+    // Migração de dados antigos (trava era do mês inteiro, não por empresa)
+    const emp = {};
+    (dados.cadastro||[]).forEach(c => { emp[c.empresa] = { fechado:true, fechadoEm: dados.mesFechadoEm || new Date().toISOString() }; });
+    return emp;
+  }
+  return {};
+}
 
-function avisoMesFechado(){
-  alert(`O mês ${labelMes(mesAtivo)} está fechado. Reabra em Fechamento (🔓 Reabrir mês) para editar.`);
+function avisoMesFechado(empresa){
+  if (empresa){
+    alert(`${empresa} está fechada em ${labelMes(mesAtivo)}. Reabra em Fechamento pra editar.`);
+  } else {
+    alert(`${labelMes(mesAtivo)} está com todas as empresas fechadas. Reabra alguma em Fechamento pra editar.`);
+  }
 }
 
 function registrarLog(area, ref, campo, de, para){
@@ -1134,6 +1214,28 @@ async function salvarCatalogoFinanceiro(){
 async function carregarCatalogoFinanceiro(){
   try{
     const r = await window.storage.get('catalogo-financeiro', false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+async function salvarCatalogoFuncoes(){
+  try{ await window.storage.set('catalogo-funcoes', JSON.stringify(catalogoFuncoes), false); return true; }
+  catch(e){ console.error('Erro ao salvar catálogo de funções', e); return false; }
+}
+async function carregarCatalogoFuncoes(){
+  try{
+    const r = await window.storage.get('catalogo-funcoes', false);
+    if (r && r.value) return JSON.parse(r.value);
+  }catch(e){}
+  return null;
+}
+async function salvarCatalogoSetores(){
+  try{ await window.storage.set('catalogo-setores', JSON.stringify(catalogoSetores), false); return true; }
+  catch(e){ console.error('Erro ao salvar catálogo de setores', e); return false; }
+}
+async function carregarCatalogoSetores(){
+  try{
+    const r = await window.storage.get('catalogo-setores', false);
     if (r && r.value) return JSON.parse(r.value);
   }catch(e){}
   return null;
@@ -1175,6 +1277,26 @@ function autoSaveCatalogoFinanceiro(){
     flashSave('anTipoSaveInd');
   }, 500);
 }
+let saveTimerFuncoes = null;
+function autoSaveFuncoes(){
+  temAlteracoesPendentes = true;
+  clearTimeout(saveTimerFuncoes);
+  saveTimerFuncoes = setTimeout(async ()=>{
+    await salvarCatalogoFuncoes();
+    temAlteracoesPendentes = false;
+    flashSave('fsFuncaoSaveInd');
+  }, 500);
+}
+let saveTimerSetores = null;
+function autoSaveSetores(){
+  temAlteracoesPendentes = true;
+  clearTimeout(saveTimerSetores);
+  saveTimerSetores = setTimeout(async ()=>{
+    await salvarCatalogoSetores();
+    temAlteracoesPendentes = false;
+    flashSave('fsSetorSaveInd');
+  }, 500);
+}
 
 // ---------------------------------------------------------------
 // Salvar tudo, sob demanda (botão) e como rede de segurança para
@@ -1191,6 +1313,8 @@ async function salvarTudo(mostrarFeedback){
     salvarDadosMes(mesAtivo),
     salvarCatalogoMotivos(),
     salvarCatalogoFinanceiro(),
+    salvarCatalogoFuncoes(),
+    salvarCatalogoSetores(),
     salvarIndiceMeses(),
     salvarMesAtivoPreferido(),
   ]);
@@ -1278,7 +1402,7 @@ async function montarPacoteBackup(){
   const pacote = { geradoEm: new Date().toISOString(), mesesDisponiveis, catalogoMotivos, catalogoTiposFinanceiros, dados: {} };
   for (const chave of mesesDisponiveis){
     pacote.dados[chave] = (chave === mesAtivo)
-      ? { cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, mesFechado, mesFechadoEm, logAlteracoes }
+      ? { cadastro, ocorrencias, lancamentosFinanceiros, diasUteisMes, diasUteisPorEmpresa, baseInfo, empresasFechadas, logAlteracoes }
       : (await carregarDadosMes(chave)) || null;
   }
   return pacote;
@@ -1415,7 +1539,7 @@ async function abrirMes(chave){
   let dados = await carregarDadosMes(chave);
   const eraNovo = !dados;
   if (eraNovo){
-    dados = { cadastro: [], ocorrencias: [], lancamentosFinanceiros: [], diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {}, baseInfo: { fonte:'Mês criado em branco', atualizadoEm: new Date().toISOString() }, mesFechado:false, mesFechadoEm:null, logAlteracoes:[] };
+    dados = { cadastro: [], ocorrencias: [], lancamentosFinanceiros: [], diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {}, baseInfo: { fonte:'Mês criado em branco', atualizadoEm: new Date().toISOString() }, empresasFechadas:{}, logAlteracoes:[] };
   }
   cadastro = dados.cadastro || [];
   ocorrencias = dados.ocorrencias || [];
@@ -1423,8 +1547,7 @@ async function abrirMes(chave){
   diasUteisMes = dados.diasUteisMes ?? diasUteisDoMes(chave);
   diasUteisPorEmpresa = dados.diasUteisPorEmpresa || {};
   baseInfo = dados.baseInfo || { fonte:'—', atualizadoEm:null };
-  mesFechado = dados.mesFechado === true;
-  mesFechadoEm = dados.mesFechadoEm || null;
+  empresasFechadas = resolverEmpresasFechadas(dados);
   logAlteracoes = dados.logAlteracoes || [];
   mesUpdatedAtCarregado = dados._updatedAt || null;
   conflitoDetectado = false;
@@ -1446,7 +1569,7 @@ async function criarNovoMes(){
     return;
   }
   const cadastroOrigem = mesAtivo;
-  const novoCadastro = JSON.parse(JSON.stringify(cadastro));
+  const novoCadastro = JSON.parse(JSON.stringify(cadastro.filter(c => c.status !== 'desligado')));
   mesesDisponiveis.push(chave);
   mesesDisponiveis.sort();
   await salvarIndiceMeses();
@@ -1458,8 +1581,7 @@ async function criarNovoMes(){
   diasUteisMes = diasUteisDoMes(chave);
   diasUteisPorEmpresa = {};
   baseInfo = { fonte: `Criado a partir do cadastro de ${labelMes(cadastroOrigem)}`, atualizadoEm: new Date().toISOString() };
-  mesFechado = false;
-  mesFechadoEm = null;
+  empresasFechadas = {};
   logAlteracoes = [];
   mesUpdatedAtCarregado = null;
   conflitoDetectado = false;
@@ -1487,7 +1609,7 @@ async function garantirDadosMes(chave){
     ocorrencias: [], lancamentosFinanceiros: [],
     diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {},
     baseInfo: { fonte: `Criado automaticamente ao parcelar um lançamento de ${labelMes(mesAtivo)}`, atualizadoEm: new Date().toISOString() },
-    mesFechado: false, mesFechadoEm: null, logAlteracoes: []
+    empresasFechadas: {}, logAlteracoes: []
   };
   if (!mesesDisponiveis.includes(chave)){
     mesesDisponiveis.push(chave);
@@ -1627,8 +1749,142 @@ function calcularFechamento(){
   });
 }
 
+// Versão "avulsa" do cálculo do Fechamento — usada só pra somar o
+// total VA+VT de um mês que NÃO é o mês aberto na tela (comparativo
+// com mês anterior, histórico), sem mexer em nada do que já está
+// renderizado. Deliberadamente mais simples que calcularFechamento()
+// (só o total, não cada coluna).
+function totalPorEmpresaDeDados(dadosMes){
+  const cad = dadosMes.cadastro || [];
+  const ocs = dadosMes.ocorrencias || [];
+  const dUm = dadosMes.diasUteisMes ?? 22;
+  const dUe = dadosMes.diasUteisPorEmpresa || {};
+  const porNome = {};
+  for (const o of ocs){
+    const n = (o.nome||'').trim();
+    if (!porNome[n]) porNome[n] = [];
+    porNome[n].push(o);
+  }
+  const porEmpresa = {};
+  let total = 0;
+  for (const c of cad){
+    const diasUteis = (dUe[c.empresa] ?? dUm);
+    const ocsDoColab = porNome[c.nome.trim()] || [];
+    let descVA = 0, descVT = 0;
+    for (const o of ocsDoColab){
+      let dias = (ehFerias(o.motivo) && o.data && o.dataFim)
+        ? (diasUteisEntreDatas(o.data, o.dataFim) || Number(o.dias) || 1)
+        : (Number(o.dias) || 1);
+      const cat = buscarMotivo(o.motivo);
+      if (cat?.descontaVA) descVA += dias;
+      if (cat?.descontaVT) descVT += dias;
+    }
+    const diasExtra = ocsDoColab.reduce((s,o)=> s + (Number(o.diasVaVt)||0), 0);
+    const dobras = ocsDoColab.reduce((s,o)=> s + (Number(o.dobrasVa)||0), 0);
+    const diasLanche = ocsDoColab.reduce((s,o)=> s + (o.lanche ? 1 : 0), 0);
+    const totalDiasVA = diasUteis - descVA + diasExtra + dobras;
+    const totalDiasVT = diasUteis - descVT + diasExtra - diasLanche;
+    const valor = totalDiasVA*(c.va||0) + totalDiasVT*(c.vt||0);
+    porEmpresa[c.empresa] = (porEmpresa[c.empresa]||0) + valor;
+    total += valor;
+  }
+  return { porEmpresa, total };
+}
+
+async function totaisDoMes(chave){
+  const dadosMes = (chave === mesAtivo)
+    ? { cadastro, ocorrencias, diasUteisMes, diasUteisPorEmpresa }
+    : await carregarDadosMes(chave);
+  if (!dadosMes) return null;
+  return totalPorEmpresaDeDados(dadosMes);
+}
+
+async function renderComparativoMesAnterior(){
+  const box = document.getElementById('comparativoMesAnterior');
+  if (!box) return;
+  const idx = mesesDisponiveis.indexOf(mesAtivo);
+  const chaveAnterior = idx > 0 ? mesesDisponiveis[idx-1] : null;
+  if (!chaveAnterior){
+    box.innerHTML = `<div class="bar-block"><h3>Comparado com o mês anterior</h3><p class="footnote" style="margin:0;">Esse é o mês mais antigo salvo — ainda não tem com o que comparar.</p></div>`;
+    return;
+  }
+  const [atual, anterior] = await Promise.all([totaisDoMes(mesAtivo), totaisDoMes(chaveAnterior)]);
+  if (!atual || !anterior){ box.innerHTML = ''; return; }
+  if (mesAtivo !== document.getElementById('selMes')?.value) return; // usuário já trocou de mês antes de terminar de carregar
+
+  const empresas = [...new Set([...Object.keys(atual.porEmpresa), ...Object.keys(anterior.porEmpresa)])].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const linhas = empresas.map(emp => {
+    const vAtual = atual.porEmpresa[emp]||0;
+    const vAnterior = anterior.porEmpresa[emp]||0;
+    const variacao = vAnterior > 0 ? ((vAtual-vAnterior)/vAnterior*100) : (vAtual>0 ? 100 : 0);
+    const cor = Math.abs(variacao) >= 15 ? 'var(--magenta)' : (variacao>=0 ? 'var(--green)' : 'var(--cyan)');
+    const seta = variacao>0.05 ? '▲' : (variacao<-0.05 ? '▼' : '—');
+    return `<div style="display:flex; align-items:center; gap:10px; padding:5px 0; font-size:12.5px; border-bottom:1px solid var(--line-soft);">
+      <span class="tag" style="color:${corEmpresa(emp)}; background:${corEmpresa(emp)}22; min-width:100px; text-align:center;">${escAttr(emp)}</span>
+      <span style="width:110px; font-family:var(--mono); color:var(--muted); text-align:right;">${fmtBRL(vAnterior)}</span>
+      <span style="color:var(--muted);">→</span>
+      <span style="width:110px; font-family:var(--mono); text-align:right;">${fmtBRL(vAtual)}</span>
+      <span style="color:${cor}; font-weight:700; min-width:70px;">${seta} ${Math.abs(variacao).toFixed(1)}%</span>
+    </div>`;
+  }).join('');
+  const varTotal = anterior.total > 0 ? ((atual.total-anterior.total)/anterior.total*100) : 0;
+  box.innerHTML = `
+    <div class="bar-block">
+      <h3>Comparado com ${labelMes(chaveAnterior)}</h3>
+      ${linhas}
+      <div style="margin-top:8px; padding-top:8px; font-size:13px;">
+        <strong>Total: ${fmtBRL(anterior.total)} → ${fmtBRL(atual.total)} (${varTotal>=0?'+':''}${varTotal.toFixed(1)}%)</strong>
+      </div>
+    </div>`;
+}
+
+async function renderHistoricoFechamentos(){
+  const box = document.getElementById('historicoFechamentos');
+  if (!box) return;
+  const idxAtual = mesesDisponiveis.indexOf(mesAtivo);
+  const janela = mesesDisponiveis.slice(Math.max(0, idxAtual-5), idxAtual+1);
+  if (janela.length < 2){
+    box.innerHTML = `<div class="bar-block"><h3>Histórico de Fechamentos</h3><p class="footnote" style="margin:0;">Precisa de pelo menos 2 meses salvos pra montar o histórico.</p></div>`;
+    return;
+  }
+  const totais = [];
+  for (const chave of janela){
+    totais.push({ chave, total: (await totaisDoMes(chave))?.total || 0 });
+  }
+  if (mesAtivo !== document.getElementById('selMes')?.value) return;
+  const max = Math.max(...totais.map(t=>t.total), 1);
+  const barras = totais.map(t => `
+    <div class="bar-row">
+      <div class="bar-label">${labelMes(t.chave)}${t.chave===mesAtivo?' (atual)':''}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(t.total/max*100).toFixed(1)}%; background:var(--brand-red)"></div></div>
+      <div class="bar-val">${fmtBRL(t.total)}</div>
+    </div>`).join('');
+  box.innerHTML = `<div class="bar-block"><h3>Total de VA+VT — últimos ${totais.length} meses salvos</h3>${barras}</div>`;
+}
+
+function renderIndicadores(){
+  renderComparativoMesAnterior();
+  renderHistoricoFechamentos();
+}
+
 function faltasPendentesRevisao(){
   return ocorrencias.filter(o => nomeCanonico(o.motivo).toUpperCase().startsWith('FALTA') && o.revisado===false);
+}
+
+// Colaboradores que tiveram falta lançada nas Ocorrências do mês, mas
+// ainda não têm nenhum lançamento do tipo "falta" nas Anotações
+// Financeiras — é o que avisa a contabilidade do desconto.
+function faltasSemAnotacaoContabilidade(){
+  const nomesComFalta = [...new Set(
+    ocorrencias.filter(o => nomeCanonico(o.motivo).toUpperCase().includes('FALTA')).map(o => (o.nome||'').trim())
+  )].filter(Boolean);
+  return nomesComFalta.filter(nome => {
+    const nomeUp = nome.toUpperCase();
+    return !lancamentosFinanceiros.some(l =>
+      (l.nome||'').trim().toUpperCase() === nomeUp &&
+      nomeCanonicoTipoFinanceiro(l.tipo).includes('FALTA')
+    );
+  });
 }
 
 // ---------------------------------------------------------------
@@ -1661,6 +1917,39 @@ function renderDashboard(){
     alerta.innerHTML = '';
   }
 
+  const semAnotacao = faltasSemAnotacaoContabilidade();
+  const alertaFA = document.getElementById('alertaFaltasSemAnotacao');
+  if (semAnotacao.length > 0){
+    alertaFA.style.display = 'block';
+    alertaFA.innerHTML = `
+      <div class="alert-banner info">
+        <span class="alert-icon">📋</span>
+        <div>
+          <strong>${semAnotacao.length} colaborador${semAnotacao.length>1?'es têm':' tem'} falta em ${labelMes(mesAtivo)} sem desconto lançado nas Anotações Financeiras.</strong>
+          Não esqueça de avisar a contabilidade: ${semAnotacao.join(', ')}.
+        </div>
+        <button class="btn" id="btnLancarFaltas" ${mesEstaFechado()?'disabled title="Mês fechado — reabra em Fechamento"':''}>Lançar agora</button>
+      </div>`;
+    const btnLF = document.getElementById('btnLancarFaltas');
+    if (btnLF) btnLF.addEventListener('click', () => {
+      if (mesEstaFechado()){ avisoMesFechado(); return; }
+      const tipoFalta = catalogoTiposFinanceiros.find(t => nomeCanonicoTipoFinanceiro(t.tipo).includes('FALTA'))?.tipo || 'DESCONTO DE FALTA';
+      semAnotacao.forEach(nome => {
+        lancamentosFinanceiros.push({
+          data: dataHojeISO(), nome, tipo: tipoFalta, valor: 0,
+          observacao: 'Falta — confirme o valor com a contabilidade',
+          revisado:false, enviado:false,
+        });
+      });
+      autoSave('anSaveInd');
+      ativarTab('anotacoes');
+      renderAnotacoes();
+    });
+  } else {
+    alertaFA.style.display = 'none';
+    alertaFA.innerHTML = '';
+  }
+
   document.getElementById('periodoLabel').textContent = `${labelMes(mesAtivo).toUpperCase()} · ${totalColab} COLABORADORES · ${totalOcorr} OCORRÊNCIAS`;
 }
 
@@ -1670,12 +1959,15 @@ function renderDashboard(){
 function popularFiltrosCadastro(){
   const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
   const funcoes = [...new Set(cadastro.map(c=>c.funcao))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+  const setores = [...new Set(cadastro.map(c=>c.setor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
   const selE = document.getElementById('cadFiltroEmpresa');
   const selF = document.getElementById('cadFiltroFuncao');
-  const curE = selE.value, curF = selF.value;
+  const selS = document.getElementById('cadFiltroSetor');
+  const curE = selE.value, curF = selF.value, curS = selS.value;
   selE.innerHTML = '<option value="">Todas empresas</option>' + empresas.map(e=>`<option value="${e}">${e}</option>`).join('');
   selF.innerHTML = '<option value="">Todas funções</option>' + funcoes.map(f=>`<option value="${f}">${f}</option>`).join('');
-  selE.value = curE; selF.value = curF;
+  selS.innerHTML = '<option value="">Todos setores</option>' + setores.map(s=>`<option value="${s}">${s}</option>`).join('');
+  selE.value = curE; selF.value = curF; selS.value = curS;
 
   const selE2 = document.getElementById('feFiltroEmpresa');
   const curE2 = selE2.value;
@@ -1683,11 +1975,13 @@ function popularFiltrosCadastro(){
   selE2.value = curE2;
 }
 
-const FUNCOES_PADRAO = ['ADM','COMERCIAL','CONTROLE','ESTOQUE','EXTERNA','LABORATORIO'];
-
 function opcoesFuncao(atual){
-  const lista = [...new Set([...FUNCOES_PADRAO, atual].filter(Boolean))];
+  const lista = [...new Set([...catalogoFuncoes.map(f=>f.nome), atual].filter(Boolean))];
   return lista.map(f => `<option value="${escAttr(f)}" ${f===atual?'selected':''}>${escAttr(f)}</option>`).join('');
+}
+function opcoesSetor(atual){
+  const lista = [...new Set([...catalogoSetores.map(s=>s.nome), atual].filter(Boolean))];
+  return `<option value="" ${!atual?'selected':''}>—</option>` + lista.map(s => `<option value="${escAttr(s)}" ${s===atual?'selected':''}>${escAttr(s)}</option>`).join('');
 }
 
 function renderCadastro(){
@@ -1696,33 +1990,49 @@ function renderCadastro(){
   const busca = document.getElementById('cadBusca').value.trim().toUpperCase();
   const fEmp = document.getElementById('cadFiltroEmpresa').value;
   const fFun = document.getElementById('cadFiltroFuncao').value;
+  const fSet = document.getElementById('cadFiltroSetor').value;
+  const mostrarDesligados = document.getElementById('cadMostrarDesligados').checked;
 
   const linhas = cadastro
     .map((c,i)=>({...c, _i:i}))
-    .filter(c => (!busca || c.nome.toUpperCase().includes(busca)) && (!fEmp || c.empresa===fEmp) && (!fFun || c.funcao===fFun))
+    .filter(c => (mostrarDesligados || c.status !== 'desligado') && (!busca || c.nome.toUpperCase().includes(busca)) && (!fEmp || c.empresa===fEmp) && (!fFun || c.funcao===fFun) && (!fSet || c.setor===fSet))
     .sort((a,b)=> a.nome.localeCompare(b.nome, 'pt-BR', {sensitivity:'base'}));
 
   const tbody = document.querySelector('#tblCadastro tbody');
   if (linhas.length === 0){
-    tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum colaborador encontrado com esse filtro em ${labelMes(mesAtivo)}.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum colaborador encontrado com esse filtro em ${labelMes(mesAtivo)}.</div></td></tr>`;
     return;
   }
-  const fechado = mesEstaFechado();
+  const fechado = mesEstaFechado(); // todas as empresas fechadas — só usado pro botão "+"
   document.getElementById('btnAddCadastro').disabled = fechado;
 
+  // Detecta nome duplicado no cadastro inteiro do mês (não só no filtro em tela) —
+  // como Ocorrências/Anotações casam tudo pelo nome, dois iguais bagunçariam os dados.
+  const contagemNomes = {};
+  cadastro.forEach(c => { const k = c.nome.trim().toUpperCase(); if (k) contagemNomes[k] = (contagemNomes[k]||0)+1; });
+
   tbody.innerHTML = linhas.map(c => {
-    const travado = c.travado === true || fechado;
+    const empFechada = empresaEstaFechada(c.empresa);
+    const desligado = c.status === 'desligado';
+    const travado = c.travado === true || empFechada;
     const dis = travado ? 'disabled' : '';
+    const duplicado = contagemNomes[c.nome.trim().toUpperCase()] > 1;
     return `
-    <tr data-idx="${c._i}">
-      <td><input data-f="nome" value="${escAttr(c.nome)}" ${dis}></td>
+    <tr data-idx="${c._i}" style="${desligado?'opacity:.55;':''}">
+      <td>
+        <input data-f="nome" value="${escAttr(c.nome)}" ${dis} style="${duplicado?'border-color:var(--magenta);':''}">
+        ${duplicado ? `<span class="warn-dot" style="color:var(--magenta);" title="Tem outro colaborador com esse nome exatamente igual — Ocorrências e Anotações Financeiras casam pelo nome, então os dois vão se misturar. Ajuste um dos dois (ex: acrescente sobrenome).">⚠</span>` : ''}
+        ${desligado ? `<span class="tag" style="color:var(--muted); background:var(--muted)22; margin-left:6px;">Desligado</span>` : ''}
+      </td>
       <td><input data-f="empresa" value="${escAttr(c.empresa)}" style="color:${corEmpresa(c.empresa)}" ${dis}></td>
       <td><select data-f="funcao" ${dis}>${opcoesFuncao(c.funcao)}</select></td>
+      <td><select data-f="setor" ${dis}>${opcoesSetor(c.setor)}</select></td>
       <td><input class="num-in moeda" data-f="va" type="text" inputmode="decimal" value="${formatarMoedaBR(c.va)}" ${dis}></td>
       <td><input class="num-in moeda" data-f="vt" type="text" inputmode="decimal" value="${formatarMoedaBR(c.vt)}" ${dis}></td>
       <td class="row-actions">
-        <button data-lock="${c._i}" title="${fechado ? 'Mês fechado — reabra em Fechamento' : (travado ? 'Destravar para editar' : 'Travar edição')}" style="${travado?'':'color:var(--amber);'}" ${fechado?'disabled':''}>${travado ? '🔒' : '✏️'}</button>
-        <button data-del="${c._i}" title="Remover" ${travado?'disabled':''}>✕</button>
+        <button data-lock="${c._i}" title="${empFechada ? `${c.empresa} está fechada — reabra em Fechamento` : (travado ? 'Destravar para editar' : 'Travar edição')}" style="${travado?'':'color:var(--amber);'}" ${empFechada?'disabled':''}>${travado ? '🔒' : '✏️'}</button>
+        <button data-desligar="${c._i}" title="${desligado ? 'Reativar colaborador' : 'Marcar como desligado (some do próximo mês, mas continua no histórico)'}" ${empFechada?'disabled':''}>${desligado ? '↩️' : '🚪'}</button>
+        <button data-del="${c._i}" title="Remover (apaga de vez, inclusive do histórico deste mês)" ${travado?'disabled':''}>✕</button>
       </td>
     </tr>`;
   }).join('');
@@ -1735,7 +2045,7 @@ function renderCadastro(){
       const c = cadastro[idx];
       let val = e.target.value;
       if (field === 'va' || field === 'vt') val = parseMoedaBR(val);
-      if (field === 'va' || field === 'vt' || field === 'empresa'){
+      if (field === 'va' || field === 'vt' || field === 'empresa' || field === 'funcao' || field === 'setor'){
         registrarLog('Cadastro', c.nome, field.toUpperCase(), c[field], val);
       }
       c[field] = val;
@@ -1749,6 +2059,20 @@ function renderCadastro(){
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.lock);
       cadastro[idx].travado = !(cadastro[idx].travado === true);
+      autoSave('cadSaveInd');
+      renderCadastro();
+    });
+  });
+  tbody.querySelectorAll('[data-desligar]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.desligar);
+      const c = cadastro[idx];
+      const estavaDesligado = c.status === 'desligado';
+      if (!estavaDesligado){
+        if (!confirm(`Marcar "${c.nome}" como desligado? Ele continua no histórico de ${labelMes(mesAtivo)} normalmente, mas não é copiado pro próximo mês quando você criar um novo.`)) return;
+      }
+      registrarLog('Cadastro', c.nome, 'STATUS', c.status||'ativo', estavaDesligado?'ativo':'desligado');
+      c.status = estavaDesligado ? 'ativo' : 'desligado';
       autoSave('cadSaveInd');
       renderCadastro();
     });
@@ -1768,8 +2092,8 @@ function renderCadastro(){
 function exportarCadastroXlsx(){
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet([...cadastro].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})).map(c=>({
-    NOME:c.nome, EMPRESA:c.empresa, FUNCAO:c.funcao,
-    'VA DIARIO': Number(Number(c.va).toFixed(2)), 'VT DIARIO': Number(Number(c.vt).toFixed(2)),
+    NOME:c.nome, EMPRESA:c.empresa, FUNCAO:c.funcao, SETOR:c.setor||'',
+    'VA DIARIO': Number(Number(c.va).toFixed(2)), 'VT DIARIO': Number(Number(c.vt).toFixed(2)), STATUS: c.status==='desligado'?'DESLIGADO':'ATIVO',
   })));
   XLSX.utils.book_append_sheet(wb, ws, 'CADASTRO');
   XLSX.writeFile(wb, `cadastro_${mesAtivo}.xlsx`);
@@ -1781,8 +2105,8 @@ function exportarCadastroPdf(){
   const doc = new jsPDF({ orientation:'landscape', unit:'pt' });
   doc.setFontSize(13);
   doc.text(`Cadastro · ${labelMes(mesAtivo)}`, 30, 30);
-  const head = [['Nome','Empresa','Funcao','VA diario','VT diario']];
-  const body = [...cadastro].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})).map(c => [c.nome, c.empresa, c.funcao, fmtBRL(Number(c.va)), fmtBRL(Number(c.vt))]);
+  const head = [['Nome','Empresa','Funcao','Setor','VA diario','VT diario']];
+  const body = [...cadastro].sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'})).map(c => [c.nome, c.empresa, c.funcao, c.setor||'', fmtBRL(Number(c.va)), fmtBRL(Number(c.vt))]);
   doc.autoTable({ head, body, startY: 42, styles:{ fontSize:8 }, headStyles:{ fillColor:[33,38,46] } });
   doc.save(`cadastro_${mesAtivo}.pdf`);
 }
@@ -1888,7 +2212,8 @@ function renderOcorrencias(){
     const canon = nomeCanonico(o.motivo).toUpperCase();
     const pendente = canon.startsWith('FALTA') && o.revisado === false;
     const ferias = ehFerias(o.motivo);
-    const bloqueado = o.revisado === true || mesEstaFechado();
+    const empFechada = empresaEstaFechada(empresaDoLancamento(o.nome));
+    const bloqueado = o.revisado === true || empFechada;
     const dis = bloqueado ? 'disabled' : '';
     const chaveDup = `${(o.nome||'').trim().toUpperCase()}|${o.data||''}|${canon}`;
     const duplicada = (o.nome||'').trim() && o.data && canon && (contagemDup[chaveDup]||0) > 1;
@@ -1920,7 +2245,7 @@ function renderOcorrencias(){
       <td><input class="num-in" data-f="diasVaVt" type="number" step="1" value="${o.diasVaVt||0}" ${dis}></td>
       <td><input class="num-in" data-f="dobrasVa" type="number" step="1" value="${o.dobrasVa||0}" ${dis}></td>
       <td style="text-align:center">
-        <button class="btn ghost" data-lock="${o._i}" title="${mesEstaFechado() ? 'Mês fechado — reabra em Fechamento' : (bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}" ${mesEstaFechado()?'disabled':''}>${bloqueado ? '🔒' : '🔓'}</button>
+        <button class="btn ghost" data-lock="${o._i}" title="${empFechada ? 'Empresa fechada — reabra em Fechamento' : (bloqueado ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${bloqueado?'color:var(--amber); border-color:var(--amber);':''}" ${empFechada?'disabled':''}>${bloqueado ? '🔒' : '🔓'}</button>
       </td>
       <td class="row-actions"><button data-del="${o._i}" title="Remover" ${dis}>✕</button></td>
     </tr>`;
@@ -1931,7 +2256,7 @@ function renderOcorrencias(){
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
       const o = ocorrencias[idx];
-      if (o.revisado === true || mesEstaFechado()) return; // travado — não edita
+      if (o.revisado === true || empresaEstaFechada(empresaDoLancamento(o.nome))) return; // travado — não edita
 
       let val = e.target.value;
       if (['horasSabado','horasDomingo','adicionalNoturno'].includes(field)){
@@ -2009,7 +2334,8 @@ function renderOcorrencias(){
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.del);
       if (ocorrencias[idx].revisado === true){ alert('Essa ocorrência está conferida e travada. Destrave antes de remover.'); return; }
-      if (mesEstaFechado()){ avisoMesFechado(); return; }
+      const empDaLinha = empresaDoLancamento(ocorrencias[idx].nome);
+      if (empresaEstaFechada(empDaLinha)){ avisoMesFechado(empDaLinha); return; }
       ocorrencias.splice(idx,1);
       ocSelecionados.clear(); // índices mudam ao remover — mais seguro limpar a seleção
       autoSave('ocSaveInd');
@@ -2152,6 +2478,80 @@ function addMotivo(){
 }
 
 // ---------------------------------------------------------------
+// Catálogos de Funções e Setores — usados no Cadastro de colaboradores
+// ---------------------------------------------------------------
+function renderCatalogoSimples(lista, tbodySelector, autoSaveFn, renderFn){
+  const tbody = document.querySelector(tbodySelector);
+  if (lista.length === 0){
+    tbody.innerHTML = `<tr><td colspan="2"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhum item cadastrado.</div></td></tr>`;
+    return;
+  }
+  const ordenados = lista.map((item,i)=>({...item,_i:i})).sort((a,b)=>a.nome.localeCompare(b.nome,'pt-BR',{sensitivity:'base'}));
+  tbody.innerHTML = ordenados.map(item => {
+    const travado = item.travado === true;
+    const dis = travado ? 'disabled' : '';
+    return `
+    <tr data-idx="${item._i}">
+      <td><input data-f="nome" value="${escAttr(item.nome)}" ${dis}></td>
+      <td class="row-actions">
+        <button data-lock="${item._i}" title="${travado ? 'Destravar para editar' : 'Travar edição'}" style="${travado?'':'color:var(--amber);'}">${travado ? '🔒' : '✏️'}</button>
+        <button data-del="${item._i}" title="Remover" ${travado?'disabled':''}>✕</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  tbody.querySelectorAll('input[data-f]').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      lista[idx].nome = e.target.value;
+      autoSaveFn();
+    });
+    inp.addEventListener('blur', renderFn);
+  });
+  tbody.querySelectorAll('[data-lock]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.lock);
+      lista[idx].travado = !(lista[idx].travado === true);
+      autoSaveFn();
+      renderFn();
+    });
+  });
+  tbody.querySelectorAll('[data-del]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const idx = Number(e.target.dataset.del);
+      const nome = lista[idx].nome;
+      if (!confirm(`Remover "${nome}" do catálogo? Isso vale para todos os meses (colaboradores que já usam esse valor não são alterados).`)) return;
+      lista.splice(idx,1);
+      autoSaveFn();
+      renderFn();
+    });
+  });
+}
+
+function renderFuncoesSetores(){
+  renderCatalogoSimples(catalogoFuncoes, '#tblFuncoes tbody', autoSaveFuncoes, renderFuncoesSetores);
+  renderCatalogoSimples(catalogoSetores, '#tblSetores tbody', autoSaveSetores, renderFuncoesSetores);
+  renderCadastro(); // os menus de Função/Setor na tabela de Colaboradores dependem desses catálogos
+}
+
+function addFuncao(){
+  catalogoFuncoes.push({nome:'NOVA FUNÇÃO', travado:false});
+  autoSaveFuncoes();
+  renderFuncoesSetores();
+  const rows = document.querySelectorAll('#tblFuncoes tbody tr');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="nome"]');
+  last?.focus(); last?.select();
+}
+function addSetor(){
+  catalogoSetores.push({nome:'NOVO SETOR', travado:false});
+  autoSaveSetores();
+  renderFuncoesSetores();
+  const rows = document.querySelectorAll('#tblSetores tbody tr');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="nome"]');
+  last?.focus(); last?.select();
+}
+
+// ---------------------------------------------------------------
 // Render: ANOTAÇÕES FINANCEIRAS
 // (registro avulso de desconto/pagamento — não entra no cálculo do Fechamento)
 // ---------------------------------------------------------------
@@ -2160,6 +2560,139 @@ const nomeCanonicoTipoFinanceiro = t => String(t??'').trim().toUpperCase();
 function naturezaDoTipo(tipo){
   const t = catalogoTiposFinanceiros.find(x => nomeCanonicoTipoFinanceiro(x.tipo) === nomeCanonicoTipoFinanceiro(tipo));
   return t ? t.natureza : 'desconto';
+}
+
+// ---------------------------------------------------------------
+// Recibo de adiantamento (PDF) — pra imprimir/subir pro ponto e
+// colher a assinatura de quem recebeu o adiantamento, confirmando
+// que o valor vai ser descontado na folha.
+// ---------------------------------------------------------------
+function gerarReciboAdiantamento(idx){
+  if (!window.jspdf){ alert('Biblioteca de PDF ainda está carregando, tente novamente em instantes.'); return; }
+  const l = lancamentosFinanceiros[idx];
+  if (!l.nome || !l.tipo || !Number(l.valor)){
+    alert('Preencha nome, tipo e valor antes de gerar o recibo.');
+    return;
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation:'portrait', unit:'pt', format:'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margem = 40;
+  const larguraUtil = pageW - margem*2;
+  const colab = cadastro.find(c => c.nome.trim().toUpperCase() === l.nome.trim().toUpperCase());
+  const parcelado = l.parcelaTotal > 1;
+  const dataParcela = l.data ? new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR') : '—';
+  const hoje = new Date().toLocaleDateString('pt-BR');
+  const obsLimpa = (l.observacao || '').replace(/\s*\(Parcela \d+\/\d+\)\s*$/, '').trim();
+
+  // Se for parcelado, calcula a data da 1ª parcela (mesmo dia, contando
+  // os meses pra trás a partir desta) e o valor total do adiantamento.
+  let dataInicioDesconto = dataParcela, valorTotalAdiantado = Number(l.valor)||0;
+  if (parcelado && l.data){
+    const [ano, mes, dia] = l.data.split('-').map(Number);
+    const chaveParcela = `${ano}-${String(mes).padStart(2,'0')}`;
+    const mesBase = somarMeses(chaveParcela, -(l.parcelaNum-1));
+    const [anoB, mesB] = mesBase.split('-').map(Number);
+    const ultimoDiaB = new Date(anoB, mesB, 0).getDate();
+    dataInicioDesconto = new Date(`${mesBase}-${String(Math.min(dia,ultimoDiaB)).padStart(2,'0')}T00:00:00`).toLocaleDateString('pt-BR');
+    valorTotalAdiantado = (Number(l.valor)||0) * l.parcelaTotal;
+  }
+
+  // Cabeçalho — barra escura + friso vermelho, igual ao padrão dos extratos da produção
+  doc.setFillColor(24,26,32); doc.rect(0,0,pageW,80,'F');
+  doc.setFillColor(225,6,0); doc.rect(0,78,pageW,3,'F');
+  doc.setTextColor(255,255,255); doc.setFont(undefined,'bold'); doc.setFontSize(17);
+  doc.text('Recibo de Adiantamento', margem, 38);
+  doc.setFont(undefined,'normal'); doc.setFontSize(9.5); doc.setTextColor(190,190,196);
+  doc.text('ILED Produções · Departamento Pessoal', margem, 55);
+  doc.setFontSize(9); doc.text(`Emitido em ${hoje}`, pageW-margem, 35, {align:'right'});
+  doc.text(`Referente a ${labelMes(mesAtivo)}`, pageW-margem, 50, {align:'right'});
+
+  // Colaborador
+  doc.setTextColor(20,20,24); doc.setFont(undefined,'bold'); doc.setFontSize(15);
+  doc.text(l.nome, margem, 118);
+  doc.setFont(undefined,'normal'); doc.setFontSize(10); doc.setTextColor(90,90,96);
+  const subtitulo = colab ? `${colab.empresa}${colab.funcao?' · '+colab.funcao:''}${colab.setor?' · '+colab.setor:''}` : 'Empresa/função não localizada no Cadastro deste mês';
+  doc.text(subtitulo, margem, 134);
+
+  // Detalhes — um campo por linha (rótulo em cima, valor embaixo), pra
+  // texto comprido nunca colidir com nada, seja lá qual for o tamanho.
+  let y = 168;
+  const campo = (label, valor) => {
+    doc.setFont(undefined,'bold'); doc.setFontSize(9); doc.setTextColor(120,120,126);
+    doc.text(label.toUpperCase(), margem, y);
+    y += 13;
+    doc.setFont(undefined,'normal'); doc.setFontSize(10.5); doc.setTextColor(20,20,24);
+    const linhas = doc.splitTextToSize(String(valor||'—'), larguraUtil);
+    doc.text(linhas, margem, y);
+    y += linhas.length*13 + 12;
+  };
+  campo(parcelado ? `Data desta parcela (${l.parcelaNum}/${l.parcelaTotal})` : 'Data do adiantamento', dataParcela);
+  campo('Tipo', l.tipo);
+  if (obsLimpa) campo('Observação', obsLimpa);
+
+  // Caixa de valor, com friso vermelho igual ao dos extratos — sempre
+  // abaixo dos detalhes (largura cheia), nunca do lado, pra não colidir
+  y += 6;
+  const boxY = y;
+  const boxH = parcelado ? 100 : 66;
+  doc.setDrawColor(225,6,0); doc.setLineWidth(1.3);
+  doc.roundedRect(margem, boxY, larguraUtil, boxH, 5, 5);
+  let by = boxY + 24;
+  if (parcelado){
+    doc.setFont(undefined,'normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,96);
+    doc.text(`Valor total do adiantamento`, margem+16, by);
+    doc.setFont(undefined,'bold'); doc.setFontSize(15); doc.setTextColor(20,20,24);
+    doc.text(fmtBRL(valorTotalAdiantado), margem+16, by+20);
+    doc.setFont(undefined,'normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,96);
+    doc.text(`Valor desta parcela (${l.parcelaNum} de ${l.parcelaTotal})`, pageW-margem-16, by, {align:'right'});
+    doc.setFont(undefined,'bold'); doc.setFontSize(18); doc.setTextColor(225,6,0);
+    doc.text(fmtBRL(Number(l.valor)||0), pageW-margem-16, by+22, {align:'right'});
+    by += 48;
+    doc.setDrawColor(230,230,234); doc.setLineWidth(0.6); doc.line(margem+16, by, pageW-margem-16, by);
+    by += 18;
+    doc.setFont(undefined,'normal'); doc.setFontSize(9); doc.setTextColor(90,90,96);
+    doc.text(`Descontos iniciados em ${dataInicioDesconto} · ${l.parcelaTotal} parcela(s) · última em ${labelMes(somarMeses(mesAtivo, l.parcelaTotal - l.parcelaNum))}`, margem+16, by);
+  } else {
+    doc.setFont(undefined,'normal'); doc.setFontSize(9.5); doc.setTextColor(90,90,96);
+    doc.text('Valor adiantado', margem+16, by);
+    doc.setFont(undefined,'bold'); doc.setFontSize(18); doc.setTextColor(225,6,0);
+    doc.text(fmtBRL(Number(l.valor)||0), margem+16, by+24);
+    doc.setFont(undefined,'normal'); doc.setFontSize(8.5); doc.setTextColor(120,120,126);
+    doc.text(`Será descontado na folha de ${labelMes(mesAtivo)}`, margem+16, by+42);
+  }
+  y = boxY + boxH + 30;
+
+  // Declaração
+  doc.setDrawColor(225,225,230); doc.setLineWidth(0.6); doc.line(margem, y-16, pageW-margem, y-16);
+  doc.setFontSize(10.5); doc.setTextColor(30,30,34); doc.setFont(undefined,'normal');
+  const declaracao = parcelado
+    ? `Eu, ${l.nome}, declaro ter recebido de ILED Produções o adiantamento no valor total de ${fmtBRL(valorTotalAdiantado)}, referente a "${obsLimpa || l.tipo}", a ser descontado em ${l.parcelaTotal} parcela(s) de ${fmtBRL(Number(l.valor)||0)}, com início em ${dataInicioDesconto}. Esta parcela (${l.parcelaNum}/${l.parcelaTotal}) autorizo descontar da minha folha de pagamento de ${labelMes(mesAtivo)}.`
+    : `Eu, ${l.nome}, declaro ter recebido de ILED Produções o adiantamento no valor de ${fmtBRL(Number(l.valor)||0)}, em ${dataParcela}, referente a "${obsLimpa || l.tipo}", o qual autorizo descontar da minha folha de pagamento de ${labelMes(mesAtivo)}.`;
+  const linhasDecl = doc.splitTextToSize(declaracao, larguraUtil);
+  doc.text(linhasDecl, margem, y);
+  y += linhasDecl.length*14 + 40;
+
+  // Assinaturas — sempre pelo menos 60pt abaixo do texto da declaração,
+  // nunca em posição fixa (evita colidir se a declaração crescer)
+  const ySig = Math.max(y, 560);
+  doc.setDrawColor(60,60,66); doc.setLineWidth(0.8);
+  doc.line(margem, ySig, margem+220, ySig);
+  doc.line(pageW-margem-220, ySig, pageW-margem, ySig);
+  doc.setFontSize(9.5); doc.setTextColor(60,60,66);
+  doc.text('Assinatura do colaborador', margem, ySig+14);
+  doc.text('Assinatura do responsável (DP)', pageW-margem-220, ySig+14);
+  doc.setFontSize(9); doc.setTextColor(120,120,126);
+  doc.text('Data: ____ / ____ / ______', margem, ySig+30);
+  doc.text('Data: ____ / ____ / ______', pageW-margem-220, ySig+30);
+
+  // Rodapé
+  doc.setFontSize(8); doc.setTextColor(150,150,156);
+  doc.text('Documento gerado automaticamente pelo Painel DP · ILED Produções', pageW/2, 800, {align:'center'});
+
+  const nomeArquivo = l.nome.trim().replace(/[^\p{L}\p{N}]+/gu,'_');
+  const sufixoParcela = parcelado ? `_parcela${l.parcelaNum}de${l.parcelaTotal}` : '';
+  doc.save(`recibo-adiantamento_${nomeArquivo}${sufixoParcela}_${l.data||mesAtivo}.pdf`);
 }
 
 function renderTiposFinanceiros(){
@@ -2301,7 +2834,8 @@ function renderAnotacoes(){
   const tiposUnicos = [...new Set(catalogoTiposFinanceiros.map(t=>t.tipo))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
 
   tbody.innerHTML = linhas.map(l => {
-    const bloqueado = l.revisado === true || mesEstaFechado();
+    const empFechada = empresaEstaFechada(empresaDoLancamento(l.nome));
+    const bloqueado = l.revisado === true || empFechada;
     const dis = bloqueado ? 'disabled' : '';
     const enviado = l.enviado === true;
     const nat = naturezaDoTipo(l.tipo);
@@ -2320,7 +2854,7 @@ function renderAnotacoes(){
       <td><input class="num-in moeda" data-f="valor" type="text" inputmode="decimal" value="${formatarMoedaBR(l.valor)}" ${dis}></td>
       <td><input data-f="observacao" value="${escAttr(l.observacao)}" placeholder="Observação (opcional)…" ${dis}></td>
       <td style="text-align:center">
-        <button class="btn ghost" data-lock="${l._i}" title="${mesEstaFechado() ? 'Mês fechado — reabra em Fechamento' : (l.revisado===true ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${l.revisado===true?'color:var(--amber); border-color:var(--amber);':''}" ${mesEstaFechado()?'disabled':''}>${l.revisado===true ? '🔒' : '🔓'}</button>
+        <button class="btn ghost" data-lock="${l._i}" title="${empFechada ? 'Empresa fechada — reabra em Fechamento' : (l.revisado===true ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${l.revisado===true?'color:var(--amber); border-color:var(--amber);':''}" ${empFechada?'disabled':''}>${l.revisado===true ? '🔒' : '🔓'}</button>
       </td>
       <td style="text-align:center">
         <button class="btn ghost" data-enviado="${l._i}" title="${enviado ? 'Já foi mandado pra contabilidade — clique para desmarcar' : 'Marcar como já enviado pra contabilidade'}" style="padding:4px 8px; ${enviado?'color:var(--green); border-color:var(--green);':''}">${enviado ? '📤' : '⬜'}</button>
@@ -2330,7 +2864,10 @@ function renderAnotacoes(){
           ? `<button class="btn ghost" data-desfazer-parcela="${l._i}" title="Parcela ${l.parcelaNum} de ${l.parcelaTotal} — clique pra desfazer o parcelamento e editar" style="padding:4px 8px; color:var(--cyan); border-color:var(--cyan);" ${dis}>${l.parcelaNum}/${l.parcelaTotal} ✕</button>`
           : `<button class="btn ghost" data-parcelar="${l._i}" title="Parcelar — lança o mesmo valor automaticamente nos próximos meses" style="padding:4px 8px;" ${dis}>🔁</button>`}
       </td>
-      <td class="row-actions"><button data-del="${l._i}" title="Remover" ${dis}>✕</button></td>
+      <td class="row-actions">
+        ${nat==='desconto' ? `<button data-recibo="${l._i}" title="Gerar recibo de adiantamento em PDF, pra assinatura">🖨️</button>` : ''}
+        <button data-del="${l._i}" title="Remover" ${dis}>✕</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -2347,7 +2884,7 @@ function renderAnotacoes(){
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
       const l = lancamentosFinanceiros[idx];
-      if (l.revisado === true || mesEstaFechado()) return;
+      if (l.revisado === true || empresaEstaFechada(empresaDoLancamento(l.nome))) return;
       let val = e.target.value;
       if (field === 'valor') val = parseMoedaBR(val);
       if (field === 'valor' || field === 'tipo'){
@@ -2397,11 +2934,15 @@ function renderAnotacoes(){
   tbody.querySelectorAll('[data-desfazer-parcela]').forEach(btn => {
     btn.addEventListener('click', e => desfazerParcelamento(Number(e.target.dataset.desfazerParcela)));
   });
+  tbody.querySelectorAll('[data-recibo]').forEach(btn => {
+    btn.addEventListener('click', e => gerarReciboAdiantamento(Number(e.target.dataset.recibo)));
+  });
   tbody.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.del);
       if (lancamentosFinanceiros[idx].revisado === true){ alert('Esse lançamento está conferido e travado. Destrave antes de remover.'); return; }
-      if (mesEstaFechado()){ avisoMesFechado(); return; }
+      const empDaLinha = empresaDoLancamento(lancamentosFinanceiros[idx].nome);
+      if (empresaEstaFechada(empDaLinha)){ avisoMesFechado(empDaLinha); return; }
       if (!confirm('Remover esse lançamento?')) return;
       lancamentosFinanceiros.splice(idx,1);
       autoSave('anSaveInd');
@@ -2452,16 +2993,15 @@ function exportarAnotacoesPdf(){
 // Render: FECHAMENTO
 // ---------------------------------------------------------------
 function renderDiasUteisPorEmpresa(){
-  const fechado = mesEstaFechado();
   document.getElementById('diasUteisMes').value = diasUteisMes;
-  document.getElementById('diasUteisMes').disabled = fechado;
+  document.getElementById('diasUteisMes').disabled = mesEstaFechado();
   const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
   const wrap = document.getElementById('diasUteisEmpresaLista');
   wrap.innerHTML = empresas.map(emp => `
     <label style="display:flex; flex-direction:column; gap:4px; font-size:11px; color:var(--muted);">
       <span style="color:${corEmpresa(emp)}">${escAttr(emp)}</span>
       <input class="num-in" data-emp="${escAttr(emp)}" type="number" min="0" max="31" step="1"
-        placeholder="${diasUteisMes}" value="${diasUteisPorEmpresa[emp] ?? ''}" style="width:70px" ${fechado?'disabled':''}>
+        placeholder="${diasUteisMes}" value="${diasUteisPorEmpresa[emp] ?? ''}" style="width:70px" ${empresaEstaFechada(emp)?'disabled':''}>
     </label>`).join('');
   wrap.querySelectorAll('[data-emp]').forEach(inp => {
     inp.addEventListener('input', e => {
@@ -2498,6 +3038,49 @@ function empresaDoLancamento(nomeLancamento){
   const nomeUp = (nomeLancamento||'').trim().toUpperCase();
   const c = cadastro.find(c => c.nome.trim().toUpperCase() === nomeUp);
   return c ? c.empresa : null;
+}
+
+// Ocorrências e Anotações cujo nome não bate com ninguém no Cadastro
+// deste mês — ficam de fora do cálculo do Fechamento sem avisar nada,
+// então isso é o que evita mandar a folha faltando gente por erro de
+// digitação (ex: nome escrito diferente do Cadastro).
+function nomesOrfaos(){
+  const nomesCadastro = new Set(cadastro.map(c => c.nome.trim().toUpperCase()));
+  const deOcorrencias = [...new Set(
+    ocorrencias.filter(o => !nomesCadastro.has((o.nome||'').trim().toUpperCase())).map(o => (o.nome||'').trim())
+  )].filter(Boolean);
+  const deAnotacoes = [...new Set(
+    lancamentosFinanceiros.filter(l => !nomesCadastro.has((l.nome||'').trim().toUpperCase())).map(l => (l.nome||'').trim())
+  )].filter(Boolean);
+  return { deOcorrencias, deAnotacoes };
+}
+
+function renderAlertaNomesOrfaos(){
+  const box = document.getElementById('alertaNomesOrfaos');
+  if (!box) return;
+  const { deOcorrencias, deAnotacoes } = nomesOrfaos();
+  if (deOcorrencias.length === 0 && deAnotacoes.length === 0){
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  const partes = [];
+  if (deOcorrencias.length) partes.push(`Ocorrências: ${deOcorrencias.join(', ')}`);
+  if (deAnotacoes.length) partes.push(`Anotações Financeiras: ${deAnotacoes.join(', ')}`);
+  box.style.display = 'block';
+  box.innerHTML = `
+    <div class="alert-banner">
+      <span class="alert-icon">🚫</span>
+      <div>
+        <strong>Nome(s) sem cadastro em ${labelMes(mesAtivo)} — não estão entrando no cálculo do Fechamento.</strong>
+        Confira se não é erro de digitação (o nome precisa ser idêntico ao do Cadastro): ${partes.join(' · ')}.
+      </div>
+      <button class="btn" id="btnVerCadastroOrfaos">Ver Cadastro</button>
+    </div>`;
+  document.getElementById('btnVerCadastroOrfaos').addEventListener('click', () => {
+    ativarTab('cadastro');
+    ativarSubTab('cadastro', 'colaboradores');
+  });
 }
 
 function renderAlertaAnotacoesFechamento(){
@@ -2553,49 +3136,101 @@ function lancamentosPendentesPorNome(){
 }
 
 // ---------------------------------------------------------------
-// Mês fechado: banner de status + botão de fechar/reabrir na aba
-// Fechamento. Fechar trava edição em Cadastro/Ocorrências/Anotações
-// do mês inteiro (além dos cadeados por linha que já existiam).
+// Fechar por empresa: cada empresa trava/destrava independente das
+// outras (não precisam fechar todas no mesmo dia). Fechar uma empresa
+// trava a edição de Cadastro/Ocorrências/Anotações dos colaboradores
+// dela (além dos cadeados por linha que já existiam).
 // ---------------------------------------------------------------
+// Resumo rápido antes de fechar uma empresa — última chance de notar
+// algo estranho (pendência de revisão, algo não enviado pra contabilidade).
+function resumoFechamentoEmpresa(empresa){
+  const colaboradores = cadastro.filter(c => c.empresa === empresa);
+  const fechamento = calcularFechamento().filter(f => f.empresa === empresa);
+  const total = fechamento.reduce((s,f)=>s+f.total, 0);
+  const pendRevisao = ocorrencias.filter(o => empresaDoLancamento(o.nome)===empresa && o.revisado===false).length;
+  const pendEnvio = lancamentosFinanceiros.filter(l => empresaDoLancamento(l.nome)===empresa && l.enviado!==true).length;
+  return { qtdColab: colaboradores.length, total, pendRevisao, pendEnvio };
+}
+
 function renderStatusMesFechado(){
   const box = document.getElementById('statusMesFechado');
-  if (mesFechado){
-    const quando = mesFechadoEm ? new Date(mesFechadoEm).toLocaleString('pt-BR') : '';
-    box.innerHTML = `
-      <div class="alert-banner">
-        <span class="alert-icon">🔒</span>
-        <div>
-          <strong>${labelMes(mesAtivo)} está fechado${quando ? ' desde ' + quando : ''}.</strong>
-          Cadastro, Ocorrências e Anotações Financeiras deste mês estão travados pra edição.
-        </div>
-        <button class="btn" id="btnReabrirMes">🔓 Reabrir mês</button>
-      </div>`;
-    document.getElementById('btnReabrirMes').addEventListener('click', () => {
-      if (!confirm(`Reabrir ${labelMes(mesAtivo)} pra edição?`)) return;
-      mesFechado = false;
-      mesFechadoEm = null;
-      autoSave('feSaveInd');
-      renderTudo();
-    });
-  } else {
-    box.innerHTML = `
-      <div class="toolbar" style="margin-bottom:14px;">
-        <span class="footnote" style="margin:0;">Depois de mandar o Fechamento pra contabilidade, feche o mês pra evitar edições por engano.</span>
-        <div class="spacer"></div>
-        <button class="btn" id="btnFecharMes">🔒 Fechar mês</button>
-      </div>`;
-    document.getElementById('btnFecharMes').addEventListener('click', () => {
-      if (!confirm(`Fechar ${labelMes(mesAtivo)}? Isso trava a edição em Cadastro, Ocorrências e Anotações Financeiras deste mês. Dá pra reabrir depois se precisar.`)) return;
-      mesFechado = true;
-      mesFechadoEm = new Date().toISOString();
-      autoSave('feSaveInd');
-      renderTudo();
-    });
+  const empresas = [...new Set(cadastro.map(c=>c.empresa))].sort((a,b)=>a.localeCompare(b,'pt-BR',{sensitivity:'base'}));
+
+  if (empresas.length === 0){
+    box.innerHTML = '';
+    return;
   }
+
+  const linhas = empresas.map(emp => {
+    const info = empresasFechadas[emp];
+    const fechada = !!(info && info.fechado);
+    const quando = fechada && info.fechadoEm ? new Date(info.fechadoEm).toLocaleString('pt-BR') : '';
+    return `
+      <div style="display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--line-soft);">
+        <span class="tag" style="color:${corEmpresa(emp)}; background:${corEmpresa(emp)}22; min-width:110px; text-align:center;">${escAttr(emp)}</span>
+        <span style="flex:1; font-size:12.5px; color:var(--muted);">${fechada ? `Fechada${quando?' desde '+quando:''}` : 'Aberta — ainda dá pra editar'}</span>
+        <button class="btn ${fechada?'':'ghost'}" data-toggle-empresa="${escAttr(emp)}" style="padding:5px 12px;">${fechada ? '🔓 Reabrir' : '🔒 Fechar'}</button>
+      </div>`;
+  }).join('');
+
+  const todasFechadas = mesEstaFechado();
+  box.innerHTML = `
+    <div class="bar-block" style="margin-bottom:14px;">
+      <h3 style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        Fechamento por empresa
+        <button class="btn ${todasFechadas?'ghost':'primary'}" id="btnAlternarTodasEmpresas" style="font-size:12px; padding:6px 12px;">${todasFechadas ? '🔓 Reabrir todas' : '🔒 Fechar todas'}</button>
+      </h3>
+      <p class="footnote" style="margin:0 0 8px;">Cada empresa fecha na hora que mandar a folha dela pra contabilidade — não precisa esperar as outras.</p>
+      ${linhas}
+    </div>`;
+
+  box.querySelectorAll('[data-toggle-empresa]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const emp = btn.dataset.toggleEmpresa;
+      const fechadaAgora = empresaEstaFechada(emp);
+      if (fechadaAgora){
+        if (!confirm(`Reabrir ${emp} pra edição?`)) return;
+        delete empresasFechadas[emp];
+      } else {
+        const r = resumoFechamentoEmpresa(emp);
+        const avisos = [];
+        if (r.pendRevisao > 0) avisos.push(`⚠ ${r.pendRevisao} ocorrência(s) ainda pendente(s) de revisão`);
+        if (r.pendEnvio > 0) avisos.push(`⚠ ${r.pendEnvio} lançamento(s) em Anotações ainda não enviado(s) pra contabilidade`);
+        const msg = `Fechar ${emp}?\n\n${r.qtdColab} colaborador(es) · Total VA+VT: ${fmtBRL(r.total)}` +
+          (avisos.length ? `\n\n${avisos.join('\n')}` : '\n\nNenhuma pendência encontrada.') +
+          `\n\nIsso trava a edição de Cadastro, Ocorrências e Anotações Financeiras dos colaboradores dessa empresa. Dá pra reabrir depois se precisar.`;
+        if (!confirm(msg)) return;
+        empresasFechadas[emp] = { fechado:true, fechadoEm: new Date().toISOString() };
+      }
+      autoSave('feSaveInd');
+      renderTudo();
+    });
+  });
+  const btnTodas = document.getElementById('btnAlternarTodasEmpresas');
+  if (btnTodas) btnTodas.addEventListener('click', () => {
+    if (todasFechadas){
+      if (!confirm('Reabrir todas as empresas deste mês pra edição?')) return;
+      empresas.forEach(emp => delete empresasFechadas[emp]);
+    } else {
+      const resumos = empresas.map(emp => resumoFechamentoEmpresa(emp));
+      const totalGeral = resumos.reduce((s,r)=>s+r.total,0);
+      const totalColab = resumos.reduce((s,r)=>s+r.qtdColab,0);
+      const totalPend = resumos.reduce((s,r)=>s+r.pendRevisao+r.pendEnvio,0);
+      const msg = `Fechar todas as empresas deste mês?\n\n${empresas.length} empresa(s) · ${totalColab} colaborador(es) · Total geral VA+VT: ${fmtBRL(totalGeral)}` +
+        (totalPend > 0 ? `\n\n⚠ ${totalPend} pendência(s) no total (revisão ou envio pra contabilidade) — confira antes se quiser.` : '\n\nNenhuma pendência encontrada.') +
+        `\n\nDá pra reabrir individualmente depois.`;
+      if (!confirm(msg)) return;
+      const agora = new Date().toISOString();
+      empresas.forEach(emp => { empresasFechadas[emp] = { fechado:true, fechadoEm: agora }; });
+    }
+    autoSave('feSaveInd');
+    renderTudo();
+  });
 }
 
 function renderFechamento(){
   renderStatusMesFechado();
+  renderAlertaNomesOrfaos();
   renderDiasUteisPorEmpresa();
   renderAlertaAnotacoesFechamento();
   const dados = dadosFechamentoFiltrados();
@@ -2936,8 +3571,7 @@ async function lerCartaoPontoPdf(file){
       lancamentosFinanceiros = dados?.lancamentosFinanceiros || [];
       diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
       baseInfo = dados?.baseInfo || baseInfo;
-      mesFechado = dados?.mesFechado === true;
-      mesFechadoEm = dados?.mesFechadoEm || null;
+      empresasFechadas = resolverEmpresasFechadas(dados || {});
       logAlteracoes = dados?.logAlteracoes || [];
       mesUpdatedAtCarregado = dados?._updatedAt || null;
       conflitoDetectado = false;
@@ -3132,8 +3766,7 @@ async function importarPonto(wb, chaveAlvo, nomeArquivo, status){
     ocorrencias = dados?.ocorrencias || [];
     diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(chaveAlvo);
     baseInfo = dados?.baseInfo || baseInfo;
-    mesFechado = dados?.mesFechado === true;
-    mesFechadoEm = dados?.mesFechadoEm || null;
+    empresasFechadas = resolverEmpresasFechadas(dados || {});
     logAlteracoes = dados?.logAlteracoes || [];
     mesUpdatedAtCarregado = dados?._updatedAt || null;
     conflitoDetectado = false;
@@ -3216,7 +3849,7 @@ function exportarXlsx(){
   const dados = dadosFechamentoFiltrados();
   const wb = XLSX.utils.book_new();
 
-  const wsCad = XLSX.utils.json_to_sheet(cadastro.map(c=>({NOME:c.nome,EMPRESA:c.empresa,'VALOR VA':c.va,'VALOR VT':c.vt,'FUNÇÃO':c.funcao})));
+  const wsCad = XLSX.utils.json_to_sheet(cadastro.map(c=>({NOME:c.nome,EMPRESA:c.empresa,'VALOR VA':c.va,'VALOR VT':c.vt,'FUNÇÃO':c.funcao,'SETOR':c.setor||''})));
   XLSX.utils.book_append_sheet(wb, wsCad, 'CADASTRO');
 
   const wsOc = XLSX.utils.json_to_sheet(ocorrencias.map(o=>({DATA:o.data,NOME:o.nome,MOTIVO:nomeCanonico(o.motivo),DIAS:o.dias||1,'HORAS SABADO (50%)':o.horasSabado,'HORAS DOMINGO (100%)':o.horasDomingo,'ADICIONAL NOTURNO':o.adicionalNoturno,'LANCHE':o.lanche?'S':'N','DIAS DE VA E VT':o.diasVaVt,'DOBRAS VA':o.dobrasVa})));
@@ -3256,7 +3889,7 @@ function baixar(blob, nome){
 // Formulário rápido: novo colaborador / nova ocorrência
 // ---------------------------------------------------------------
 function addColaborador(){
-  cadastro.push({nome:'NOVO COLABORADOR', empresa: cadastro[0]?.empresa || 'ILED', funcao:'EXTERNA', va:0, vt:0});
+  cadastro.push({nome:'NOVO COLABORADOR', empresa: cadastro[0]?.empresa || 'ILED', funcao:'EXTERNA', setor:'', va:0, vt:0, status:'ativo'});
   autoSave('cadSaveInd');
   renderCadastro(); renderDashboard(); renderFechamento();
   const rows = document.querySelectorAll('#tblCadastro tbody tr');
@@ -3302,7 +3935,9 @@ function renderTudo(){
   renderCadastro();
   renderOcorrencias();
   renderMotivos();
+  renderFuncoesSetores();
   renderFechamento();
+  renderIndicadores();
   renderAnotacoes();
   renderSincronizar();
 }
@@ -3358,7 +3993,19 @@ async function init(){
 
   const catalogoFinanceiroSalvo = await carregarCatalogoFinanceiro();
   catalogoTiposFinanceiros = catalogoFinanceiroSalvo || JSON.parse(JSON.stringify(CATALOGO_FINANCEIRO_PADRAO));
+  // Migração: garante que exista um tipo pra descontar falta, mesmo em catálogos já salvos
+  if (!catalogoTiposFinanceiros.some(t => nomeCanonicoTipoFinanceiro(t.tipo).includes('FALTA'))){
+    catalogoTiposFinanceiros.push({tipo:'DESCONTO DE FALTA', natureza:'desconto', travado:false});
+  }
   await salvarCatalogoFinanceiro();
+
+  const catalogoFuncoesSalvo = await carregarCatalogoFuncoes();
+  catalogoFuncoes = catalogoFuncoesSalvo || JSON.parse(JSON.stringify(CATALOGO_FUNCOES_PADRAO));
+  await salvarCatalogoFuncoes();
+
+  const catalogoSetoresSalvo = await carregarCatalogoSetores();
+  catalogoSetores = catalogoSetoresSalvo || JSON.parse(JSON.stringify(CATALOGO_SETORES_PADRAO));
+  await salvarCatalogoSetores();
 
   let indice = await carregarIndiceMeses();
   if (!indice || indice.length === 0){
@@ -3384,8 +4031,7 @@ async function init(){
     diasUteisMes = dados?.diasUteisMes ?? diasUteisDoMes(mesAtivo);
     diasUteisPorEmpresa = dados?.diasUteisPorEmpresa || {};
     baseInfo = dados?.baseInfo || { fonte:'—', atualizadoEm:null };
-    mesFechado = dados?.mesFechado === true;
-    mesFechadoEm = dados?.mesFechadoEm || null;
+    empresasFechadas = resolverEmpresasFechadas(dados || {});
     logAlteracoes = dados?.logAlteracoes || [];
     mesUpdatedAtCarregado = dados?._updatedAt || null;
   }
@@ -3408,6 +4054,8 @@ async function init(){
   document.getElementById('cadBusca').addEventListener('input', renderCadastro);
   document.getElementById('cadFiltroEmpresa').addEventListener('change', renderCadastro);
   document.getElementById('cadFiltroFuncao').addEventListener('change', renderCadastro);
+  document.getElementById('cadFiltroSetor').addEventListener('change', renderCadastro);
+  document.getElementById('cadMostrarDesligados').addEventListener('change', renderCadastro);
   document.getElementById('btnAddCadastro').addEventListener('click', addColaborador);
   document.getElementById('btnExportCadXlsx').addEventListener('click', exportarCadastroXlsx);
   document.getElementById('btnExportCadPdf').addEventListener('click', exportarCadastroPdf);
@@ -3476,6 +4124,8 @@ async function init(){
 
   document.getElementById('moBusca').addEventListener('input', renderMotivos);
   document.getElementById('btnAddMotivo').addEventListener('click', addMotivo);
+  document.getElementById('btnAddFuncao').addEventListener('click', addFuncao);
+  document.getElementById('btnAddSetor').addEventListener('click', addSetor);
 
   document.getElementById('btnAddTipoFinanceiro').addEventListener('click', addTipoFinanceiro);
   document.getElementById('anBusca').addEventListener('input', renderAnotacoes);
