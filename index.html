@@ -308,6 +308,7 @@
   #tblAnotacoes th:nth-child(6), #tblAnotacoes td:nth-child(6){ min-width:220px; }
   #tblAnotacoes th:nth-child(7), #tblAnotacoes td:nth-child(7){ min-width:96px; text-align:center; }
   #tblAnotacoes th:nth-child(8), #tblAnotacoes td:nth-child(8){ min-width:96px; text-align:center; }
+  #tblAnotacoes th:nth-child(9), #tblAnotacoes td:nth-child(9){ min-width:96px; text-align:center; }
 
   /* ---------- Ocorrências: largura mínima por coluna p/ não embolar ---------- */
   #tblOcorrencias th, #tblOcorrencias td{ padding-left:10px; padding-right:10px; }
@@ -488,6 +489,7 @@
       </label>
       <div class="spacer"></div>
       <span class="save-indicator" id="ocSaveInd">salvo</span>
+      <button class="btn ghost" id="btnAtalhoMotivos" title="Abre Cadastro › Motivos numa aba/seção nova, pra editar sem sair daqui">⚙️ Editar motivos</button>
       <button class="btn" id="btnExportOcCsv">Exportar CSV</button>
       <button class="btn" id="btnExportOcXlsx">Exportar XLSX</button>
       <button class="btn" id="btnExportOcPdf">Exportar PDF</button>
@@ -533,10 +535,10 @@
       <input type="text" id="feBusca" placeholder="Buscar por colaborador…">
       <select id="feFiltroEmpresa"><option value="">Todas empresas</option></select>
       <div class="spacer"></div>
-      <span class="footnote" style="margin:0;">Exporta o que está filtrado acima (tudo, por empresa ou por colaborador)</span>
-      <button class="btn" id="btnExportCsv">⬇ CSV</button>
-      <button class="btn" id="btnExportXlsx">⬇ Planilha (.xlsx)</button>
-      <button class="btn primary" id="btnExportPdf">⬇ PDF</button>
+      <span class="footnote" style="margin:0;">CSV e PDF exportam só o Fechamento filtrado acima. O Excel abaixo traz tudo do mês, sem filtro.</span>
+      <button class="btn" id="btnExportCsv">⬇ CSV (Fechamento filtrado)</button>
+      <button class="btn primary" id="btnExportPdf">⬇ PDF (Fechamento filtrado)</button>
+      <button class="btn" id="btnExportXlsx" title="Um Excel só, com uma aba pra cada: Cadastro, Ocorrências, Fechamento, Motivos e Anotações Financeiras">⬇ Baixar tudo do mês (.xlsx)</button>
     </div>
     <div class="legend">
       <span><i style="background:var(--amber)"></i> Desconto de VA/VT definido por motivo na aba Motivos</span>
@@ -614,7 +616,7 @@
     <div class="table-wrap">
       <table id="tblAnotacoes">
         <thead><tr>
-          <th>Data</th><th>Colaborador</th><th>Tipo</th><th>Natureza</th><th>Valor R$</th><th>Observação</th><th>Conferido</th><th>Enviado</th><th></th>
+          <th>Data</th><th>Colaborador</th><th>Tipo</th><th>Natureza</th><th>Valor R$</th><th>Observação</th><th>Conferido</th><th>Enviado</th><th>Parcela</th><th></th>
         </tr></thead>
         <tbody></tbody>
         <tfoot></tfoot>
@@ -658,12 +660,29 @@
     </div>
     <div class="bar-block">
       <h3>Histórico de alterações — <span id="logMesAtualNome"></span></h3>
-      <p class="footnote" style="margin-top:-6px;">Registro de mudanças em campos importantes (VA/VT/empresa no Cadastro, dias/motivo nas Ocorrências, valor/tipo nas Anotações) deste mês. Mantém os 300 mais recentes.</p>
+      <p class="footnote" style="margin-top:-6px;">Registro de mudanças em campos importantes: VA/VT/empresa no Cadastro, dias/motivo nas Ocorrências, valor/tipo nas Anotações, dias úteis no Fechamento, e os Catálogos de Motivos e Tipos Financeiros. Mantém os 300 mais recentes.</p>
       <div class="table-wrap" style="max-height:320px;">
         <table id="tblLogAlteracoes">
           <thead><tr><th>Quando</th><th>Área</th><th>Referência</th><th>Campo</th><th>De</th><th>Para</th></tr></thead>
           <tbody></tbody>
         </table>
+      </div>
+    </div>
+    <div class="bar-block">
+      <h3>Conexão com o banco (Supabase)</h3>
+      <p class="footnote" style="margin-top:-6px;">
+        <strong id="conexaoStatusTexto"></strong><br>
+        ⚠️ Isso só muda a conexão <strong>neste navegador</strong>, nesta máquina — não afeta os outros acessos.
+        Se você mudar aqui, vai precisar repetir exatamente igual em cada um dos outros lugares onde abre o painel,
+        senão eles ficam apontando pra bancos diferentes. Na dúvida, não mexa aqui.
+      </p>
+      <div class="toolbar" style="margin-bottom:8px;">
+        <input type="text" id="cfgSupabaseUrl" placeholder="https://xxxxx.supabase.co" style="min-width:320px;">
+        <input type="text" id="cfgSupabaseKey" placeholder="chave anon public">
+      </div>
+      <div class="btn-row" style="display:flex; gap:8px;">
+        <button class="btn primary" id="btnSalvarConexao">💾 Salvar e recarregar</button>
+        <button class="btn ghost" id="btnRestaurarConexaoPadrao">↺ Restaurar conexão padrão</button>
       </div>
     </div>
   </section>
@@ -684,11 +703,24 @@
 // o painel funciona em qualquer computador/navegador com os mesmos
 // dados, sem depender do storage local do Claude nem do navegador.
 //
-// >>> PREENCHA AQUI com a URL e a chave "anon public" do seu projeto
-//     Supabase (Project Settings → API). <<<
+// >>> Padrão preenchido aqui embaixo — URL e chave "anon public" do
+//     projeto Supabase (Project Settings → API). Pode ser trocado
+//     sem editar o código, na aba Sincronizar → "Conexão com o banco". <<<
 // ---------------------------------------------------------------
-const SUPABASE_URL = 'https://parsuctecovbmaadplhu.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_-RoPFMVEsCcnqOcIf7iL8A_C06uwFAE';
+const SUPABASE_URL_PADRAO = 'https://parsuctecovbmaadplhu.supabase.co';
+const SUPABASE_ANON_KEY_PADRAO = 'sb_publishable_-RoPFMVEsCcnqOcIf7iL8A_C06uwFAE';
+const CHAVE_OVERRIDE_CONEXAO = 'iled-folha:conexao-supabase'; // localStorage — só deste navegador
+
+function lerConexaoAtiva(){
+  try{
+    const salvo = JSON.parse(localStorage.getItem(CHAVE_OVERRIDE_CONEXAO) || 'null');
+    if (salvo && salvo.url && salvo.key) return { url: salvo.url, key: salvo.key, personalizada: true };
+  }catch(e){}
+  return { url: SUPABASE_URL_PADRAO, key: SUPABASE_ANON_KEY_PADRAO, personalizada: false };
+}
+
+const SUPABASE_URL = lerConexaoAtiva().url;
+const SUPABASE_ANON_KEY = lerConexaoAtiva().key;
 
 const _sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const PREFIXO_LOCAL_FALLBACK = 'iled-folha:'; // só usado se o Supabase falhar (ex: sem internet)
@@ -810,6 +842,32 @@ const CATALOGO_FINANCEIRO_PADRAO = [
 ];
 
 const fmtBRL = v => (v||0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+
+// ---------------------------------------------------------------
+// Campos de valor editáveis (VA/VT no Cadastro, Valor nas Anotações):
+// mostram "1.234,56" (formato brasileiro) parado, e ao focar trocam
+// pra "1234,56" (sem separador de milhar) pra ficar fácil de digitar.
+// ---------------------------------------------------------------
+function parseMoedaBR(str){
+  if (typeof str === 'number') return str;
+  const n = parseFloat(String(str||'').replace(/\./g,'').replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+}
+function formatarMoedaBR(n){
+  return (Number(n)||0).toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function ligarCamposMoeda(container){
+  container.querySelectorAll('input.moeda').forEach(el => {
+    el.addEventListener('focus', () => {
+      const n = parseMoedaBR(el.value);
+      el.value = n === 0 ? '' : String(n.toFixed(2)).replace('.', ',');
+      el.select();
+    });
+    el.addEventListener('blur', () => {
+      el.value = formatarMoedaBR(parseMoedaBR(el.value));
+    });
+  });
+}
 const fmtNum = v => (v||0).toLocaleString('pt-BR', {minimumFractionDigits:0, maximumFractionDigits:2});
 const normHeader = s => String(s??'').trim().toUpperCase();
 
@@ -903,6 +961,11 @@ function ehFerias(motivoRaw){
 function labelMes(chave){
   const [ano, mes] = chave.split('-').map(Number);
   return `${MES_NOMES[mes-1]}/${ano}`;
+}
+function somarMeses(chave, n){
+  const [ano, mes] = chave.split('-').map(Number);
+  const d = new Date(ano, mes-1+n, 1);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
 }
 function diasUteisDoMes(chave){
   const [ano, mes] = chave.split('-').map(Number);
@@ -1085,25 +1148,30 @@ function flashSave(id){
 }
 let saveTimer = null;
 function autoSave(indicatorId){
+  temAlteracoesPendentes = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async ()=>{
     const ok = await salvarDadosMes(mesAtivo);
-    if (ok && indicatorId) flashSave(indicatorId);
+    if (ok){ temAlteracoesPendentes = false; if (indicatorId) flashSave(indicatorId); }
   }, 500);
 }
 let saveTimerMotivos = null;
 function autoSaveMotivos(){
+  temAlteracoesPendentes = true;
   clearTimeout(saveTimerMotivos);
   saveTimerMotivos = setTimeout(async ()=>{
     await salvarCatalogoMotivos();
+    temAlteracoesPendentes = false;
     flashSave('moSaveInd');
   }, 500);
 }
 let saveTimerFinanceiro = null;
 function autoSaveCatalogoFinanceiro(){
+  temAlteracoesPendentes = true;
   clearTimeout(saveTimerFinanceiro);
   saveTimerFinanceiro = setTimeout(async ()=>{
     await salvarCatalogoFinanceiro();
+    temAlteracoesPendentes = false;
     flashSave('anTipoSaveInd');
   }, 500);
 }
@@ -1113,6 +1181,8 @@ function autoSaveCatalogoFinanceiro(){
 // não perder lançamentos ao fechar a aba — dispara em várias
 // situações além do autosave por campo.
 // ---------------------------------------------------------------
+let temAlteracoesPendentes = false; // true entre uma edição e o autosave dela terminar — usado pro aviso ao sair
+
 async function salvarTudo(mostrarFeedback){
   clearTimeout(saveTimer);
   clearTimeout(saveTimerMotivos);
@@ -1124,13 +1194,20 @@ async function salvarTudo(mostrarFeedback){
     salvarIndiceMeses(),
     salvarMesAtivoPreferido(),
   ]);
+  temAlteracoesPendentes = false;
   if (mostrarFeedback) flashSave('globalSaveInd');
 }
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') salvarTudo(false);
 });
 window.addEventListener('pagehide', () => { salvarTudo(false); });
-window.addEventListener('beforeunload', () => { salvarTudo(false); });
+window.addEventListener('beforeunload', (e) => {
+  salvarTudo(false);
+  if (temAlteracoesPendentes){
+    e.preventDefault();
+    e.returnValue = ''; // o texto não aparece (navegadores usam uma mensagem padrão), mas isso é o que abre o aviso
+  }
+});
 setInterval(() => { salvarTudo(false); }, 20000);
 
 // ---------------------------------------------------------------
@@ -1398,6 +1475,109 @@ function popularSeletorMes(){
 }
 
 // ---------------------------------------------------------------
+// Parcelamento — usado pelas Anotações Financeiras. Lança a mesma
+// entrada (mesmo valor) nos meses seguintes automaticamente, sem
+// mexer no mês que está aberto na tela agora.
+// ---------------------------------------------------------------
+async function garantirDadosMes(chave){
+  let dados = await carregarDadosMes(chave);
+  if (dados) return dados;
+  dados = {
+    cadastro: JSON.parse(JSON.stringify(cadastro)), // copia do cadastro do mês de origem, igual ao "+ Novo mês"
+    ocorrencias: [], lancamentosFinanceiros: [],
+    diasUteisMes: diasUteisDoMes(chave), diasUteisPorEmpresa: {},
+    baseInfo: { fonte: `Criado automaticamente ao parcelar um lançamento de ${labelMes(mesAtivo)}`, atualizadoEm: new Date().toISOString() },
+    mesFechado: false, mesFechadoEm: null, logAlteracoes: []
+  };
+  if (!mesesDisponiveis.includes(chave)){
+    mesesDisponiveis.push(chave);
+    mesesDisponiveis.sort();
+    await salvarIndiceMeses(); // já mescla com o banco, não corre risco de apagar outro mês
+    popularSeletorMes();
+  }
+  return dados;
+}
+
+async function salvarDadosDeOutroMes(chave, dados){
+  try{ await window.storage.set(chaveStorageMes(chave), JSON.stringify(dados), false); return true; }
+  catch(e){ console.error('Erro ao salvar mês futuro', e); return false; }
+}
+
+async function parcelarLancamento(idx){
+  const l = lancamentosFinanceiros[idx];
+  if (!l.nome || !l.tipo || !Number(l.valor)){
+    alert('Preencha o nome, o tipo e o valor antes de parcelar esse lançamento.');
+    return;
+  }
+  if (l.parcelaTotal > 1){
+    alert(`Esse lançamento já é a parcela ${l.parcelaNum} de ${l.parcelaTotal}. Pra mudar o número de parcelas, apague todas as parcelas desse grupo (nos respectivos meses) e lance de novo.`);
+    return;
+  }
+  const resposta = prompt(`Em quantas parcelas no total (contando essa aqui, de ${labelMes(mesAtivo)})?\nCada mês seguinte recebe automaticamente o mesmo lançamento, com o mesmo valor.`, '2');
+  if (!resposta) return;
+  const n = parseInt(resposta, 10);
+  if (!n || n < 2 || n > 24){ alert('Digite um número entre 2 e 24.'); return; }
+
+  const grupoId = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+  const obsBase = (l.observacao || '').replace(/\s*\(Parcela \d+\/\d+\)\s*$/, '').trim();
+
+  l.parcelaGrupoId = grupoId;
+  l.parcelaNum = 1;
+  l.parcelaTotal = n;
+  l.observacao = obsBase ? `${obsBase} (Parcela 1/${n})` : `Parcela 1/${n}`;
+  await salvarDadosMes(mesAtivo);
+
+  const mesesCriados = [];
+  const diaOrigem = l.data ? Number(l.data.split('-')[2]) : new Date().getDate();
+  for (let i = 2; i <= n; i++){
+    const chaveFutura = somarMeses(mesAtivo, i-1);
+    const dadosFuturo = await garantirDadosMes(chaveFutura);
+    const [anoF, mesF] = chaveFutura.split('-').map(Number);
+    const ultimoDiaF = new Date(anoF, mesF, 0).getDate();
+    const dataFutura = `${chaveFutura}-${String(Math.min(diaOrigem, ultimoDiaF)).padStart(2,'0')}`;
+    dadosFuturo.lancamentosFinanceiros = dadosFuturo.lancamentosFinanceiros || [];
+    dadosFuturo.lancamentosFinanceiros.push({
+      data:dataFutura, nome:l.nome, tipo:l.tipo, valor:l.valor,
+      observacao: obsBase ? `${obsBase} (Parcela ${i}/${n})` : `Parcela ${i}/${n}`,
+      revisado:false, enviado:false,
+      parcelaGrupoId:grupoId, parcelaNum:i, parcelaTotal:n,
+    });
+    await salvarDadosDeOutroMes(chaveFutura, dadosFuturo);
+    mesesCriados.push(labelMes(chaveFutura));
+  }
+  renderAnotacoes();
+  alert(`Parcelado em ${n}x de ${fmtBRL(Number(l.valor)||0)}. Essa é a 1ª — as outras ${n-1} já foram lançadas automaticamente em: ${mesesCriados.join(', ')}.`);
+}
+
+async function desfazerParcelamento(idx){
+  const l = lancamentosFinanceiros[idx];
+  if (!(l.parcelaTotal > 1)) return;
+  const grupoId = l.parcelaGrupoId;
+  const total = l.parcelaTotal;
+  const mesBase = somarMeses(mesAtivo, -(l.parcelaNum - 1));
+  const listaMeses = Array.from({length: total}, (_, i) => somarMeses(mesBase, i));
+
+  if (!confirm(`Desfazer o parcelamento?\n\nIsso apaga as outras ${total-1} parcela(s) desse grupo, lançadas automaticamente em: ${listaMeses.filter(c=>c!==mesAtivo).map(labelMes).join(', ')}.\n\nEssa aqui, em ${labelMes(mesAtivo)}, fica como lançamento normal — aí você edita o valor e parcela de novo do jeito certo, se precisar.`)) return;
+
+  for (const chave of listaMeses){
+    if (chave === mesAtivo) continue; // essa a gente já mexe direto abaixo
+    const dados = await carregarDadosMes(chave);
+    if (!dados || !dados.lancamentosFinanceiros) continue;
+    const antes = dados.lancamentosFinanceiros.length;
+    dados.lancamentosFinanceiros = dados.lancamentosFinanceiros.filter(x => x.parcelaGrupoId !== grupoId);
+    if (dados.lancamentosFinanceiros.length !== antes){
+      await salvarDadosDeOutroMes(chave, dados);
+    }
+  }
+
+  delete l.parcelaGrupoId; delete l.parcelaNum; delete l.parcelaTotal;
+  l.observacao = (l.observacao || '').replace(/\s*\(Parcela \d+\/\d+\)\s*$/, '').trim();
+  await salvarDadosMes(mesAtivo);
+  renderAnotacoes();
+  renderFechamento();
+}
+
+// ---------------------------------------------------------------
 // Cálculo de fechamento — desconto por motivo definido na aba Motivos
 // ---------------------------------------------------------------
 function diasUteisDaEmpresa(empresa){
@@ -1538,8 +1718,8 @@ function renderCadastro(){
       <td><input data-f="nome" value="${escAttr(c.nome)}" ${dis}></td>
       <td><input data-f="empresa" value="${escAttr(c.empresa)}" style="color:${corEmpresa(c.empresa)}" ${dis}></td>
       <td><select data-f="funcao" ${dis}>${opcoesFuncao(c.funcao)}</select></td>
-      <td><input class="num-in" data-f="va" type="number" step="0.01" value="${Number(c.va).toFixed(2)}" ${dis}></td>
-      <td><input class="num-in" data-f="vt" type="number" step="0.01" value="${Number(c.vt).toFixed(2)}" ${dis}></td>
+      <td><input class="num-in moeda" data-f="va" type="text" inputmode="decimal" value="${formatarMoedaBR(c.va)}" ${dis}></td>
+      <td><input class="num-in moeda" data-f="vt" type="text" inputmode="decimal" value="${formatarMoedaBR(c.vt)}" ${dis}></td>
       <td class="row-actions">
         <button data-lock="${c._i}" title="${fechado ? 'Mês fechado — reabra em Fechamento' : (travado ? 'Destravar para editar' : 'Travar edição')}" style="${travado?'':'color:var(--amber);'}" ${fechado?'disabled':''}>${travado ? '🔒' : '✏️'}</button>
         <button data-del="${c._i}" title="Remover" ${travado?'disabled':''}>✕</button>
@@ -1554,7 +1734,7 @@ function renderCadastro(){
       const field = e.target.dataset.f;
       const c = cadastro[idx];
       let val = e.target.value;
-      if (field === 'va' || field === 'vt') val = parseFloat(val) || 0;
+      if (field === 'va' || field === 'vt') val = parseMoedaBR(val);
       if (field === 'va' || field === 'vt' || field === 'empresa'){
         registrarLog('Cadastro', c.nome, field.toUpperCase(), c[field], val);
       }
@@ -1563,13 +1743,8 @@ function renderCadastro(){
       renderDashboard();
       renderFechamento();
     });
-    inp.addEventListener('blur', e => {
-      const field = e.target.dataset.f;
-      if (field === 'va' || field === 'vt'){
-        e.target.value = Number(parseFloat(e.target.value) || 0).toFixed(2);
-      }
-    });
   });
+  ligarCamposMoeda(tbody);
   tbody.querySelectorAll('[data-lock]').forEach(btn => {
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.lock);
@@ -1940,7 +2115,9 @@ function renderMotivos(){
       const idx = Number(e.target.closest('tr').dataset.idx);
       const field = e.target.dataset.f;
       const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
-      catalogoMotivos[idx][field] = val;
+      const m = catalogoMotivos[idx];
+      registrarLog('Catálogo · Motivos', m.motivo, field, m[field], val);
+      m[field] = val;
       autoSaveMotivos();
       renderDashboard(); renderFechamento();
     });
@@ -2017,7 +2194,9 @@ function renderTiposFinanceiros(){
   tbody.querySelectorAll('select[data-f="natureza"]').forEach(inp => {
     inp.addEventListener('input', e => {
       const idx = Number(e.target.closest('tr').dataset.idx);
-      catalogoTiposFinanceiros[idx].natureza = e.target.value;
+      const t = catalogoTiposFinanceiros[idx];
+      registrarLog('Catálogo · Tipos financeiros', t.tipo, 'NATUREZA', t.natureza, e.target.value);
+      t.natureza = e.target.value;
       autoSaveCatalogoFinanceiro();
       renderAnotacoes();
     });
@@ -2030,7 +2209,12 @@ function renderTiposFinanceiros(){
       catalogoTiposFinanceiros[idx].tipo = e.target.value;
       autoSaveCatalogoFinanceiro();
     });
-    inp.addEventListener('blur', () => renderAnotacoes());
+    inp.addEventListener('blur', e => {
+      const idx = Number(e.target.closest('tr').dataset.idx);
+      const t = catalogoTiposFinanceiros[idx];
+      registrarLog('Catálogo · Tipos financeiros', t.tipo, 'TIPO (nome)', e.target.defaultValue, t.tipo);
+      renderAnotacoes();
+    });
   });
   tbody.querySelectorAll('[data-lock]').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -2109,7 +2293,7 @@ function renderAnotacoes(){
 
   const tbody = document.querySelector('#tblAnotacoes tbody');
   if (linhas.length === 0){
-    tbody.innerHTML = `<tr><td colspan="9"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma anotação lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="big">Nada por aqui</div>Nenhuma anotação lançada em ${labelMes(mesAtivo)} com esse filtro.</div></td></tr>`;
     document.querySelector('#tblAnotacoes tfoot').innerHTML = '';
     return;
   }
@@ -2133,13 +2317,18 @@ function renderAnotacoes(){
         </select>
       </td>
       <td style="text-align:center"><span class="tag" style="color:${corNat}; background:${corNat}22;">${nat==='pagamento'?'Pagamento':'Desconto'}</span></td>
-      <td><input class="num-in" data-f="valor" type="number" step="0.01" min="0" value="${l.valor||0}" ${dis}></td>
+      <td><input class="num-in moeda" data-f="valor" type="text" inputmode="decimal" value="${formatarMoedaBR(l.valor)}" ${dis}></td>
       <td><input data-f="observacao" value="${escAttr(l.observacao)}" placeholder="Observação (opcional)…" ${dis}></td>
       <td style="text-align:center">
         <button class="btn ghost" data-lock="${l._i}" title="${mesEstaFechado() ? 'Mês fechado — reabra em Fechamento' : (l.revisado===true ? 'Conferido — clique para destravar e editar' : 'Marcar como conferido e travar edição')}" style="padding:4px 8px; ${l.revisado===true?'color:var(--amber); border-color:var(--amber);':''}" ${mesEstaFechado()?'disabled':''}>${l.revisado===true ? '🔒' : '🔓'}</button>
       </td>
       <td style="text-align:center">
         <button class="btn ghost" data-enviado="${l._i}" title="${enviado ? 'Já foi mandado pra contabilidade — clique para desmarcar' : 'Marcar como já enviado pra contabilidade'}" style="padding:4px 8px; ${enviado?'color:var(--green); border-color:var(--green);':''}">${enviado ? '📤' : '⬜'}</button>
+      </td>
+      <td style="text-align:center">
+        ${l.parcelaTotal > 1
+          ? `<button class="btn ghost" data-desfazer-parcela="${l._i}" title="Parcela ${l.parcelaNum} de ${l.parcelaTotal} — clique pra desfazer o parcelamento e editar" style="padding:4px 8px; color:var(--cyan); border-color:var(--cyan);" ${dis}>${l.parcelaNum}/${l.parcelaTotal} ✕</button>`
+          : `<button class="btn ghost" data-parcelar="${l._i}" title="Parcelar — lança o mesmo valor automaticamente nos próximos meses" style="padding:4px 8px;" ${dis}>🔁</button>`}
       </td>
       <td class="row-actions"><button data-del="${l._i}" title="Remover" ${dis}>✕</button></td>
     </tr>`;
@@ -2150,7 +2339,7 @@ function renderAnotacoes(){
   document.querySelector('#tblAnotacoes tfoot').innerHTML = `
     <tr class="total-row">
       <td colspan="4">TOTAL no filtro (${linhas.length} lançamento(s))</td>
-      <td colspan="5">${fmtBRL(totDesc)} em desconto · ${fmtBRL(totPag)} em pagamento</td>
+      <td colspan="6">${fmtBRL(totDesc)} em desconto · ${fmtBRL(totPag)} em pagamento</td>
     </tr>`;
 
   tbody.querySelectorAll('input[data-f],select[data-f]').forEach(inp => {
@@ -2160,7 +2349,7 @@ function renderAnotacoes(){
       const l = lancamentosFinanceiros[idx];
       if (l.revisado === true || mesEstaFechado()) return;
       let val = e.target.value;
-      if (field === 'valor') val = parseFloat(val)||0;
+      if (field === 'valor') val = parseMoedaBR(val);
       if (field === 'valor' || field === 'tipo'){
         registrarLog('Anotações', l.nome, field.toUpperCase(), l[field], val);
       }
@@ -2169,6 +2358,7 @@ function renderAnotacoes(){
       if (field === 'tipo') renderAnotacoes();
     });
   });
+  ligarCamposMoeda(tbody);
   // Nome: só recalcula/reordena quando sai do campo (blur),
   // pra não reconstruir a tabela e perder o foco a cada letra digitada.
   // Data não dispara re-render nenhum (evita a linha "pular de lugar"
@@ -2201,6 +2391,12 @@ function renderAnotacoes(){
       renderFechamento();
     });
   });
+  tbody.querySelectorAll('[data-parcelar]').forEach(btn => {
+    btn.addEventListener('click', e => parcelarLancamento(Number(e.target.dataset.parcelar)));
+  });
+  tbody.querySelectorAll('[data-desfazer-parcela]').forEach(btn => {
+    btn.addEventListener('click', e => desfazerParcelamento(Number(e.target.dataset.desfazerParcela)));
+  });
   tbody.querySelectorAll('[data-del]').forEach(btn => {
     btn.addEventListener('click', e => {
       const idx = Number(e.target.dataset.del);
@@ -2214,12 +2410,17 @@ function renderAnotacoes(){
   });
 }
 
+function dataHojeISO(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
 function addLancamentoFinanceiro(){
-  lancamentosFinanceiros.push({data:'', nome:'', tipo:'', valor:0, observacao:'', revisado:false, enviado:false});
+  lancamentosFinanceiros.push({data:dataHojeISO(), nome:'', tipo:'', valor:0, observacao:'', revisado:false, enviado:false});
   autoSave('anSaveInd');
   renderAnotacoes();
   const rows = document.querySelectorAll('#tblAnotacoes tbody tr');
-  const last = rows[rows.length-1]?.querySelector('input[data-f="data"]');
+  const last = rows[rows.length-1]?.querySelector('input[data-f="nome"]');
   last?.focus();
 }
 
@@ -2227,7 +2428,7 @@ function exportarAnotacoesXlsx(){
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet([...lancamentosFinanceiros].sort((a,b)=>(a.nome||'').localeCompare(b.nome||'','pt-BR',{sensitivity:'base'})).map(l=>({
     DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
-    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N', PARCELA: (l.parcelaTotal>1 ? (l.parcelaNum+'/'+l.parcelaTotal) : ''),
   })));
   XLSX.utils.book_append_sheet(wb, ws, 'ANOTACOES');
   XLSX.writeFile(wb, `anotacoes_financeiras_${mesAtivo}.xlsx`);
@@ -2265,9 +2466,11 @@ function renderDiasUteisPorEmpresa(){
   wrap.querySelectorAll('[data-emp]').forEach(inp => {
     inp.addEventListener('input', e => {
       const emp = e.target.dataset.emp;
+      const antes = diasUteisPorEmpresa[emp] ?? '(padrão do mês)';
       const v = e.target.value;
       if (v === '') delete diasUteisPorEmpresa[emp];
       else diasUteisPorEmpresa[emp] = parseInt(v)||0;
+      registrarLog('Fechamento · Dias úteis', emp, 'DIAS ÚTEIS (empresa)', antes, diasUteisPorEmpresa[emp] ?? '(padrão do mês)');
       autoSave('feSaveInd');
       renderFechamento(); renderDashboard();
     });
@@ -2473,6 +2676,21 @@ function renderSincronizar(){
   `).join('');
   renderListaSnapshots();
   renderHistoricoAlteracoes();
+  renderConexaoSupabase();
+}
+
+function renderConexaoSupabase(){
+  const ativa = lerConexaoAtiva();
+  const statusEl = document.getElementById('conexaoStatusTexto');
+  if (statusEl){
+    statusEl.textContent = ativa.personalizada
+      ? `Usando uma conexão personalizada, salva só neste navegador: ${ativa.url}`
+      : `Usando a conexão padrão do painel: ${ativa.url}`;
+  }
+  const urlEl = document.getElementById('cfgSupabaseUrl');
+  const keyEl = document.getElementById('cfgSupabaseKey');
+  if (urlEl && document.activeElement !== urlEl) urlEl.value = ativa.url;
+  if (keyEl && document.activeElement !== keyEl) keyEl.value = ativa.key;
 }
 
 // ---------------------------------------------------------------
@@ -3019,7 +3237,7 @@ function exportarXlsx(){
 
   const wsAn = XLSX.utils.json_to_sheet(lancamentosFinanceiros.map(l=>({
     DATA:l.data, COLABORADOR:l.nome, TIPO:l.tipo, NATUREZA: naturezaDoTipo(l.tipo)==='pagamento'?'Pagamento':'Desconto',
-    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N',
+    'VALOR R$': Number((Number(l.valor)||0).toFixed(2)), OBSERVACAO:l.observacao||'', CONFERIDO: l.revisado?'S':'N', ENVIADO_CONTABILIDADE: l.enviado?'S':'N', PARCELA: (l.parcelaTotal>1 ? (l.parcelaNum+'/'+l.parcelaTotal) : ''),
   })));
   XLSX.utils.book_append_sheet(wb, wsAn, 'ANOTACOES (nao entra no total)');
 
@@ -3199,6 +3417,10 @@ async function init(){
   document.getElementById('ocFiltroData').addEventListener('change', renderOcorrencias);
   document.getElementById('ocSoNaoRevisadas').addEventListener('change', renderOcorrencias);
   document.getElementById('btnAddOcorrencia').addEventListener('click', addOcorrencia);
+  document.getElementById('btnAtalhoMotivos').addEventListener('click', () => {
+    ativarTab('cadastro');
+    ativarSubTab('cadastro', 'motivos');
+  });
   document.getElementById('btnExportOcCsv').addEventListener('click', exportarOcorrenciasCsv);
   document.getElementById('btnExportOcXlsx').addEventListener('click', exportarOcorrenciasXlsx);
   document.getElementById('btnExportOcPdf').addEventListener('click', exportarOcorrenciasPdf);
@@ -3267,7 +3489,9 @@ async function init(){
   document.getElementById('btnExportAnPdf').addEventListener('click', exportarAnotacoesPdf);
 
   document.getElementById('diasUteisMes').addEventListener('input', e => {
+    const antes = diasUteisMes;
     diasUteisMes = parseInt(e.target.value)||0;
+    registrarLog('Fechamento · Dias úteis', 'Padrão do mês', 'DIAS ÚTEIS (mês inteiro)', antes, diasUteisMes);
     autoSave('feSaveInd'); renderFechamento(); renderDashboard();
   });
   document.getElementById('feBusca').addEventListener('input', renderFechamento);
@@ -3275,6 +3499,23 @@ async function init(){
   document.getElementById('btnExportCsv').addEventListener('click', exportarCsv);
   document.getElementById('btnExportXlsx').addEventListener('click', exportarXlsx);
   document.getElementById('btnExportPdf').addEventListener('click', exportarPdf);
+
+  document.getElementById('btnSalvarConexao').addEventListener('click', () => {
+    const url = document.getElementById('cfgSupabaseUrl').value.trim().replace(/\/+$/,'');
+    const key = document.getElementById('cfgSupabaseKey').value.trim();
+    if (!/^https:\/\/.+\.supabase\.co$/.test(url) || !key){
+      alert('Preencha uma URL válida (https://xxxxx.supabase.co) e a chave "anon public".');
+      return;
+    }
+    if (!confirm('Salvar essa conexão NESTE NAVEGADOR e recarregar a página agora?\n\nIsso não muda os outros acessos — repita lá também se quiser todos apontando pro mesmo banco.')) return;
+    localStorage.setItem(CHAVE_OVERRIDE_CONEXAO, JSON.stringify({url, key}));
+    location.reload();
+  });
+  document.getElementById('btnRestaurarConexaoPadrao').addEventListener('click', () => {
+    if (!confirm('Restaurar a conexão padrão (a que vem no código) neste navegador e recarregar?')) return;
+    localStorage.removeItem(CHAVE_OVERRIDE_CONEXAO);
+    location.reload();
+  });
 
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
